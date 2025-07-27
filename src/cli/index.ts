@@ -16,6 +16,9 @@ import { logger } from "../utils/logger.js";
 import path from "path";
 import { version } from "../../package.json";
 import type { PackageJson } from "../types/file.type.js";
+import { ModuleInstaller } from "../core/installer.js";
+import { ModuleRegistry } from "../modules/index.js";
+import { InstallOptionsOnly } from "../types/project.type.js";
 
 const program = new Command();
 
@@ -37,6 +40,7 @@ program
   .option("-y, --yes", "Skip all prompts and use defaults")
   .option("-v, --verbose", "Show detailed output")
   .option("--dry-run", "Show what would be installed without making changes")
+  .option("-f, --force", "Overwrite existing configurations")
   .action(async (options) => {
     try {
       const projectPath = process.cwd();
@@ -99,7 +103,7 @@ program
       let selectedModules: string[] = [];
 
       if (options.yes) {
-        selectedModules = ["eslint-prettier"];
+        selectedModules = ["editorconfig"];
         logger.info("Using default configuration...");
       } else {
         console.log("");
@@ -114,11 +118,20 @@ program
           message: "Select tools to set up:",
           options: [
             {
+              value: "editorconfig",
+              label: "EditorConfig",
+              hint: existingConfigs.includes("editorconfig")
+                ? chalk.yellow("⚠ already configured")
+                : chalk.green("✓ recommended"),
+            },
+
+            /*
+            {
               value: "eslint-prettier",
               label: "ESLint + Prettier",
               hint: existingConfigs.includes("eslint")
                 ? chalk.yellow("⚠ already configured")
-                : chalk.green("✓ recommended"),
+                : "",
             },
             {
               value: "typescript",
@@ -136,13 +149,9 @@ program
                 ? chalk.yellow("⚠ already configured")
                 : "",
             },
-            {
-              value: "editorconfig",
-              label: "EditorConfig",
-              hint: "consistent code style",
-            },
+            */
           ],
-          initialValues: ["eslint-prettier"],
+          initialValues: ["editorconfig"],
           required: false,
         });
 
@@ -162,7 +171,10 @@ program
 
       if (!options.yes) {
         const planDetails = selectedModules
-          .map((mod) => `  • ${getModuleDescription(mod)}`)
+          .map((mod) => {
+            const module = ModuleRegistry.get(mod);
+            return module ? `  • ${module.description}` : `  • ${mod}`;
+          })
           .join("\n");
 
         note(`Will set up:\n${chalk.green(planDetails)}`, "Installation plan");
@@ -178,27 +190,45 @@ program
         }
       }
 
-      if (options.dryRun) {
-        console.log(chalk.blue("\n🔍 Dry run mode - no changes will be made"));
-        for (const module of selectedModules) {
-          console.log(chalk.gray(`Would install: ${module}`));
-        }
-        outro("Dry run complete!");
-        process.exit(0);
-      }
+      const installer = new ModuleInstaller();
+      const installOptions: InstallOptionsOnly = {
+        verbose: options.verbose,
+        dryRun: options.dryRun,
+        force: options.force,
+      };
 
       console.log("");
       const s = spinner();
 
-      for (const module of selectedModules) {
-        s.start(`Installing ${module}`);
+      for (const moduleName of selectedModules) {
+        s.start(`Installing ${moduleName}`);
 
         try {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const result = await installer.installModule(
+            moduleName,
+            projectPath,
+            installOptions
+          );
 
-          s.stop(`${chalk.green("✓")} ${module} installed`);
+          if (result.success) {
+            s.stop(`${chalk.green("✓")} ${moduleName} installed`);
+
+            if (options.verbose && result.installedFiles?.length) {
+              result.installedFiles.forEach((file) => {
+                logger.debug(`  Created: ${file}`);
+              });
+            }
+          } else {
+            s.stop(`${chalk.red("✗")} Failed to install ${moduleName}`);
+            result.errors?.forEach((err) => {
+              logger.error(`  ${err.message}`);
+            });
+            result.hints?.forEach((hint) => {
+              logger.info(`  💡 ${hint}`);
+            });
+          }
         } catch (error) {
-          s.stop(`${chalk.red("✗")} Failed to install ${module}`);
+          s.stop(`${chalk.red("✗")} Failed to install ${moduleName}`);
           throw error;
         }
       }
@@ -206,6 +236,14 @@ program
       outro(chalk.green("✨ All done!"));
 
       console.log("\n" + chalk.bold("Next steps:"));
+
+      if (selectedModules.includes("editorconfig")) {
+        console.log(
+          chalk.gray("  • Your editor will now use") +
+            chalk.cyan(" .editorconfig") +
+            chalk.gray(" for consistent code style")
+        );
+      }
 
       if (selectedModules.includes("eslint-prettier")) {
         console.log(
@@ -501,6 +539,13 @@ if (!process.argv.slice(2).length) {
 
 async function checkExistingConfigs(projectPath: string): Promise<string[]> {
   const configs = [];
+  const modules = ModuleRegistry.getAll();
+
+  for (const module of modules) {
+    if (await module.isInstalled(projectPath)) {
+      configs.push(module.name);
+    }
+  }
 
   const eslintConfigs = [
     ".eslintrc.js",
@@ -514,7 +559,9 @@ async function checkExistingConfigs(projectPath: string): Promise<string[]> {
 
   for (const config of eslintConfigs) {
     if (await fileExists(path.join(projectPath, config))) {
-      configs.push("eslint");
+      if (!configs.includes("eslint")) {
+        configs.push("eslint");
+      }
       break;
     }
   }
