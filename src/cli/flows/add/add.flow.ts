@@ -24,24 +24,16 @@ export class AddFlow {
 
       const validatedModules = await this.validateModules(options.modules);
 
-      intro(
-        chalk.cyan(
-          `Adding ${validatedModules.length} module${
-            validatedModules.length > 1 ? "s" : ""
-          }`
-        )
-      );
+      this.showStartMessage(validatedModules, options);
 
       if (options.dryRun) {
-        await this.handleDryRun(validatedModules, options);
+        await this.handleDryRun(validatedModules);
         return;
       }
 
       const results = await this.installModules(validatedModules, options);
 
-      this.showCompletionMessage(results);
-
-      outro(chalk.green("✨ All modules added successfully!"));
+      this.showResults(results);
     } catch (error) {
       await this.handleError(error);
     }
@@ -57,7 +49,7 @@ export class AddFlow {
         if (error.code === LogicErrorCodes.PROJECT_NOT_FOUND) {
           throw new SimpleCLIError(
             CLIErrorCodes.NOT_IN_PROJECT,
-            "Not a Node.js project",
+            "Not in a Node.js project",
             true,
             1,
             false,
@@ -87,23 +79,7 @@ export class AddFlow {
     );
 
     if (invalidModules.length > 0) {
-      log.error(
-        `${chalk.red("Invalid modules:")} ${invalidModules.join(", ")}`
-      );
-      log.message("");
-      log.message(chalk.yellow("Available modules:"));
-
-      ModuleRegistry.getAll().forEach((module) => {
-        log.message(
-          `  ${chalk.cyan(module.name.padEnd(20))} ${module.description}`
-        );
-      });
-
-      log.message("");
-      log.message(
-        `Example: ${chalk.cyan("devboot add eslint-prettier typescript")}`
-      );
-
+      this.showInvalidModulesError(invalidModules);
       throw new SimpleCLIError(
         CLIErrorCodes.INVALID_ARGUMENT,
         "Invalid module names provided",
@@ -117,34 +93,63 @@ export class AddFlow {
     return [...new Set(moduleNames)];
   }
 
-  private async handleDryRun(
-    modules: string[],
-    options: AddFlowOptions
-  ): Promise<void> {
+  private showInvalidModulesError(invalidModules: string[]): void {
+    log.error(
+      `${chalk.red("❌ Invalid modules:")} ${invalidModules.join(", ")}`
+    );
+    log.message("");
+    log.message(chalk.yellow("📦 Available modules:"));
+
+    ModuleRegistry.getAll().forEach((module) => {
+      log.message(
+        `  ${chalk.cyan(module.name.padEnd(20))} ${chalk.gray(
+          module.description
+        )}`
+      );
+    });
+
+    log.message("");
+    log.message(chalk.gray("Example:"));
+    log.message(chalk.cyan("  devboot add eslint-prettier typescript"));
+  }
+
+  private showStartMessage(modules: string[], options: AddFlowOptions): void {
+    const action = options.dryRun ? "Checking" : "Adding";
+    const moduleText = modules.length === 1 ? "module" : "modules";
+
+    intro(
+      chalk.cyan(`${action} ${modules.length} ${moduleText} to your project`)
+    );
+  }
+
+  private async handleDryRun(modules: string[]): Promise<void> {
     log.info(chalk.blue("🔍 Dry run mode - no changes will be made"));
     log.message("");
-
-    const context = await this.moduleInstaller.prepareContext(process.cwd());
 
     for (const moduleName of modules) {
       const module = ModuleRegistry.get(moduleName);
       if (!module) continue;
 
       log.message(chalk.bold(`\n📦 ${module.displayName}`));
+      log.message(chalk.gray(`   ${module.description}`));
 
-      const result = await module.install({
-        ...context,
-        ...options,
-      });
+      const moduleInstance = await import(`../../../modules/${moduleName}`);
+      if (moduleInstance.default?.files) {
+        log.message(chalk.gray("\n   Files that would be created:"));
+        moduleInstance.default.files.forEach((file: string) => {
+          log.message(chalk.gray(`   • ${file}`));
+        });
+      }
 
-      if (!result.success && result.errors?.length) {
-        result.errors.forEach((error) => {
-          log.error(`  ${error.message}`);
+      if (moduleInstance.default?.dependencies) {
+        log.message(chalk.gray("\n   Packages that would be installed:"));
+        moduleInstance.default.dependencies.forEach((dep: string) => {
+          log.message(chalk.gray(`   • ${dep}`));
         });
       }
     }
 
-    outro(chalk.green("Dry run complete!"));
+    outro(chalk.green("✅ Dry run complete!"));
   }
 
   private async installModules(
@@ -155,14 +160,7 @@ export class AddFlow {
     const context = await this.moduleInstaller.prepareContext(process.cwd());
 
     if (options.verbose) {
-      log.message("");
-      log.info(chalk.dim("Project details:"));
-      log.message(chalk.dim(`  Type: ${context.projectType}`));
-      log.message(
-        chalk.dim(`  TypeScript: ${context.hasTypeScript ? "Yes" : "No"}`)
-      );
-      log.message(chalk.dim(`  Package Manager: ${context.packageManager}`));
-      log.message("");
+      this.showProjectInfo(context);
     }
 
     for (const moduleName of moduleNames) {
@@ -187,110 +185,161 @@ export class AddFlow {
 
         if (result.success) {
           s.stop(`${chalk.green("✓")} ${module.displayName} installed`);
-
-          if (options.verbose && result.installedFiles?.length) {
-            result.installedFiles.forEach((file) => {
-              log.message(chalk.dim(`    Created: ${file}`));
-            });
-          }
-
-          if (options.verbose && result.installedPackages?.length) {
-            log.message(
-              chalk.dim(
-                `    Installed ${result.installedPackages.length} package${
-                  result.installedPackages.length > 1 ? "s" : ""
-                }`
-              )
-            );
-          }
-
-          if (result.hints?.length) {
-            result.hints.forEach((hint) => {
-              log.message(chalk.yellow(`    💡 ${hint}`));
-            });
-          }
+          this.showInstallDetails(result, options.verbose);
         } else {
           s.stop(`${chalk.red("✗")} Failed to install ${module.displayName}`);
-
-          if (result.errors?.length) {
-            result.errors.forEach((error) => {
-              log.error(`    ${error.message}`);
-              if (error instanceof LogicError) {
-                log.message(chalk.yellow(`    💡 ${error.solution}`));
-              }
-            });
-          }
+          this.showInstallErrors(result);
         }
       } catch (error) {
         s.stop(`${chalk.red("✗")} Failed to install ${module.displayName}`);
-
-        const errorResult: InstallResult = {
-          success: false,
-          errors: [
-            error instanceof BaseError
-              ? error
-              : new SimpleLogicError(
-                  LogicErrorCodes.MODULE_INSTALL_FAILED,
-                  error instanceof Error ? error.message : String(error),
-                  false,
-                  { module: moduleName }
-                ),
-          ],
-        };
-
-        results.set(moduleName, errorResult);
-
-        if (error instanceof BaseError) {
-          log.error(`    ${error.message}`);
-          if (error instanceof LogicError) {
-            log.message(chalk.yellow(`    💡 ${error.solution}`));
-          }
-        } else {
-          log.error(
-            `    ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
+        this.handleInstallError(moduleName, error, results);
       }
     }
 
     return results;
   }
 
-  private showCompletionMessage(results: Map<string, InstallResult>): void {
-    const successCount = Array.from(results.values()).filter(
-      (r) => r.success
-    ).length;
-
-    if (successCount === 0) return;
-
+  private showProjectInfo(context: any): void {
     log.message("");
-    log.success(
-      `Successfully installed ${successCount} module${
-        successCount > 1 ? "s" : ""
-      }`
+    log.info(chalk.dim("📊 Project details:"));
+    log.message(chalk.dim(`  • Type: ${context.projectType}`));
+    log.message(
+      chalk.dim(`  • TypeScript: ${context.hasTypeScript ? "Yes" : "No"}`)
     );
+    log.message(chalk.dim(`  • Package Manager: ${context.packageManager}`));
+    log.message("");
+  }
 
-    const nextSteps: string[] = [];
-
-    if (results.has("git-hooks") && results.get("git-hooks")?.success) {
-      nextSteps.push("git add -A && git commit -m 'Add dev tools'");
-    }
-
-    if (
-      results.has("eslint-prettier") &&
-      results.get("eslint-prettier")?.success
-    ) {
-      nextSteps.push("npm run lint");
-      nextSteps.push("npm run format");
-    }
-
-    if (nextSteps.length > 0) {
-      log.message("");
-      log.message(chalk.bold("Next steps:"));
-      nextSteps.forEach((step, index) => {
-        log.message(chalk.cyan(`  ${index + 1}. ${step}`));
+  private showInstallDetails(result: InstallResult, verbose: boolean): void {
+    if (verbose && result.installedFiles?.length) {
+      result.installedFiles.forEach((file) => {
+        log.message(chalk.dim(`    Created: ${file}`));
       });
     }
+
+    if (verbose && result.installedPackages?.length) {
+      const pkgCount = result.installedPackages.length;
+      log.message(
+        chalk.dim(`    Installed ${pkgCount} package${pkgCount > 1 ? "s" : ""}`)
+      );
+    }
+
+    if (result.hints?.length) {
+      result.hints.forEach((hint) => {
+        log.message(chalk.yellow(`    💡 ${hint}`));
+      });
+    }
+  }
+
+  private showInstallErrors(result: InstallResult): void {
+    if (result.errors?.length) {
+      result.errors.forEach((error) => {
+        log.error(`    ${error.message}`);
+        if (error instanceof LogicError && error.solution) {
+          log.message(chalk.yellow(`    💡 ${error.solution}`));
+        }
+      });
+    }
+  }
+
+  private handleInstallError(
+    moduleName: string,
+    error: unknown,
+    results: Map<string, InstallResult>
+  ): void {
+    const errorResult: InstallResult = {
+      success: false,
+      errors: [
+        error instanceof BaseError
+          ? error
+          : new SimpleLogicError(
+              LogicErrorCodes.MODULE_INSTALL_FAILED,
+              error instanceof Error ? error.message : String(error),
+              false,
+              { module: moduleName }
+            ),
+      ],
+    };
+
+    results.set(moduleName, errorResult);
+
+    if (error instanceof BaseError) {
+      log.error(`    ${error.message}`);
+      if (error instanceof LogicError && error.solution) {
+        log.message(chalk.yellow(`    💡 ${error.solution}`));
+      }
+    } else {
+      log.error(
+        `    ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private showResults(results: Map<string, InstallResult>): void {
+    const successful = Array.from(results.entries()).filter(
+      ([_, result]) => result.success
+    );
+    const failed = Array.from(results.entries()).filter(
+      ([_, result]) => !result.success
+    );
+
+    if (successful.length > 0) {
+      outro(
+        chalk.green(
+          `✨ Successfully installed ${successful.length} module${
+            successful.length > 1 ? "s" : ""
+          }!`
+        )
+      );
+      this.showNextSteps(successful.map(([name]) => name));
+    } else if (failed.length > 0) {
+      outro(chalk.red("❌ Installation failed"));
+    }
+
+    if (failed.length > 0) {
+      console.log(chalk.red("\n⚠️  Failed modules:"));
+      failed.forEach(([name, result]) => {
+        const module = ModuleRegistry.get(name);
+        console.log(chalk.red(`  • ${module?.displayName || name}`));
+        if (result.errors?.[0]) {
+          console.log(chalk.red(`    ${result.errors[0].message}`));
+        }
+      });
+    }
+  }
+
+  private showNextSteps(installedModules: string[]): void {
+    const steps: string[] = [];
+
+    if (installedModules.includes("git-hooks")) {
+      steps.push(
+        `${chalk.cyan(
+          "git add -A && git commit -m 'Add dev tools'"
+        )} - Test your new git hooks`
+      );
+    }
+
+    if (installedModules.includes("eslint-prettier")) {
+      steps.push(`${chalk.cyan("npm run lint")} - Check your code`);
+      steps.push(`${chalk.cyan("npm run format")} - Format your code`);
+    }
+
+    if (installedModules.includes("typescript")) {
+      steps.push(`${chalk.cyan("npm run typecheck")} - Check TypeScript types`);
+    }
+
+    if (steps.length > 0) {
+      console.log("");
+      console.log(chalk.bold("🎯 Next steps:"));
+      steps.forEach((step) => {
+        console.log(chalk.gray(`  • ${step}`));
+      });
+    }
+
+    console.log("");
+    console.log(chalk.gray("To add more tools:"));
+    console.log(chalk.cyan("  devboot add <module-name>"));
+    console.log("");
   }
 
   private async handleError(error: unknown): Promise<void> {
@@ -308,7 +357,7 @@ export class AddFlow {
     if (error instanceof BaseError) {
       cancel(error.message);
 
-      if (error instanceof LogicError) {
+      if (error instanceof LogicError && error.solution) {
         log.message("");
         log.message(chalk.yellow(`💡 ${error.solution}`));
       }

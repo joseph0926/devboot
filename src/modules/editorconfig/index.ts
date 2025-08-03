@@ -3,6 +3,7 @@ import {
   type InstallOptions,
   type ValidationResult,
   type FileModifier,
+  type InstallResult,
 } from "../base.module.js";
 import { fileExists } from "../../utils/file.js";
 import path from "path";
@@ -11,8 +12,12 @@ import { LogicErrorCodes } from "../../types/error.type.js";
 import { FileNotFoundError } from "../../errors/logic/file.error.js";
 import { unlink } from "fs/promises";
 import { BaseError } from "../../errors/base.error.js";
+import { EditorConfigBuilder } from "./builder.js";
+import { logger } from "../../utils/logger.js";
 
 export class EditorConfigModule extends BaseModule {
+  private generatedContent?: string;
+
   constructor() {
     super({
       name: "editorconfig",
@@ -20,6 +25,7 @@ export class EditorConfigModule extends BaseModule {
       description: "Consistent coding styles across different editors",
       detectFiles: [".editorconfig"],
       conflicts: [],
+      version: "1.0.0",
     });
   }
 
@@ -76,10 +82,43 @@ export class EditorConfigModule extends BaseModule {
     const files = new Map<string, string>();
 
     try {
-      const content = this.generateEditorConfig(options);
+      let content: string;
+
+      if (!options.dryRun && !this.generatedContent) {
+        const builder = new EditorConfigBuilder();
+        try {
+          this.generatedContent = await builder.build(options);
+          content = this.generatedContent;
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message === "Configuration cancelled"
+          ) {
+            throw new SimpleLogicError(
+              LogicErrorCodes.USER_CANCELLED,
+              "EditorConfig setup cancelled by user",
+              false
+            );
+          }
+          throw error;
+        }
+      } else if (this.generatedContent) {
+        content = this.generatedContent;
+      } else {
+        content = this.generateDefaultConfig(options);
+
+        if (options.verbose) {
+          logger.info("Using default EditorConfig configuration");
+        }
+      }
+
       files.set(".editorconfig", content);
       return files;
     } catch (error) {
+      if (error instanceof BaseError) {
+        throw error;
+      }
+
       throw new SimpleLogicError(
         LogicErrorCodes.CONFIG_GENERATION_FAILED,
         "Failed to generate .editorconfig content",
@@ -96,12 +135,11 @@ export class EditorConfigModule extends BaseModule {
     return new Map();
   }
 
-  async uninstall(
-    options: InstallOptions
-  ): Promise<import("../base.module.js").InstallResult> {
-    const result: import("../base.module.js").InstallResult = {
+  async uninstall(options: InstallOptions): Promise<InstallResult> {
+    const result: InstallResult = {
       success: false,
       errors: [],
+      hints: [],
     };
 
     try {
@@ -118,6 +156,10 @@ export class EditorConfigModule extends BaseModule {
         await unlink(configPath);
         result.success = true;
         result.message = ".editorconfig removed successfully";
+
+        if (options.verbose) {
+          logger.success("EditorConfig configuration removed");
+        }
       } catch (error: any) {
         if (error.code === "EACCES") {
           throw new SimpleLogicError(
@@ -156,63 +198,58 @@ export class EditorConfigModule extends BaseModule {
     return result;
   }
 
-  private generateEditorConfig(options: InstallOptions): string {
-    try {
-      const lines: string[] = [
-        "# EditorConfig is awesome: https://EditorConfig.org",
-        "",
-        "root = true",
-        "",
-        "[*]",
-        "charset = utf-8",
-        "end_of_line = lf",
-        "insert_final_newline = true",
-        "trim_trailing_whitespace = true",
-        "indent_style = space",
-        "indent_size = 2",
-        "",
-      ];
+  /**
+   * 비대화형 모드나 dry-run을 위한 기본 설정 생성
+   */
+  private generateDefaultConfig(options: InstallOptions): string {
+    const lines: string[] = [
+      "# EditorConfig is awesome: https://EditorConfig.org",
+      "",
+      "root = true",
+      "",
+      "[*]",
+      "charset = utf-8",
+      "end_of_line = lf",
+      "insert_final_newline = true",
+      "trim_trailing_whitespace = true",
+      "indent_style = space",
+      "indent_size = 2",
+      "",
+    ];
 
-      lines.push("[*.md]", "trim_trailing_whitespace = false", "");
+    lines.push("[*.md]", "trim_trailing_whitespace = false", "");
 
-      lines.push("[*.{json,yml,yaml}]", "indent_size = 2", "");
+    lines.push("[*.{json,yml,yaml}]", "indent_size = 2", "");
 
-      if (["next", "vite", "react", "node"].includes(options.projectType)) {
-        lines.push("[*.{js,jsx,mjs,cjs}]", "indent_size = 2", "");
+    if (["next", "vite", "react", "node"].includes(options.projectType)) {
+      lines.push("[*.{js,jsx,mjs,cjs}]", "indent_size = 2", "");
 
-        if (options.hasTypeScript) {
-          lines.push("[*.{ts,tsx}]", "indent_size = 2", "");
-        }
+      if (options.hasTypeScript) {
+        lines.push("[*.{ts,tsx}]", "indent_size = 2", "");
       }
-
-      lines.push("[Makefile]", "indent_style = tab", "");
-
-      const prettierConfig = options.packageJson.prettier;
-      if (prettierConfig && typeof prettierConfig === "object") {
-        if (
-          "tabWidth" in prettierConfig &&
-          typeof prettierConfig.tabWidth === "number"
-        ) {
-          const content = lines.join("\n");
-          return content.replace(
-            /indent_size = \d+/g,
-            `indent_size = ${prettierConfig.tabWidth}`
-          );
-        }
-      }
-
-      return lines.join("\n");
-    } catch (error) {
-      throw new SimpleLogicError(
-        LogicErrorCodes.CONFIG_GENERATION_FAILED,
-        "Failed to generate EditorConfig content",
-        false,
-        {
-          projectType: options.projectType,
-          hasTypeScript: options.hasTypeScript,
-          error: error instanceof Error ? error.message : String(error),
-        }
-      );
     }
+
+    lines.push("[Makefile]", "indent_style = tab", "");
+
+    const prettierConfig = options.packageJson.prettier;
+    if (prettierConfig && typeof prettierConfig === "object") {
+      if (
+        "tabWidth" in prettierConfig &&
+        typeof prettierConfig.tabWidth === "number"
+      ) {
+        const content = lines.join("\n");
+        return content.replace(
+          /indent_size = \d+/g,
+          `indent_size = ${prettierConfig.tabWidth}`
+        );
+      }
+
+      if ("useTabs" in prettierConfig && prettierConfig.useTabs === true) {
+        const content = lines.join("\n");
+        return content.replace(/indent_style = space/g, "indent_style = tab");
+      }
+    }
+
+    return lines.join("\n");
   }
 }

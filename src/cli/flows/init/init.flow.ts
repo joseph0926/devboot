@@ -36,15 +36,28 @@ export class InitFlow {
 
       const existingConfigs = await this.checkExistingConfigs(projectPath);
 
+      if (this.isFullyConfigured(existingConfigs)) {
+        this.showAlreadyConfiguredMessage();
+        return;
+      }
+
       const selectedModules = await this.selectModules(
         projectInfo,
         existingConfigs
       );
 
-      await this.checkConflicts(existingConfigs, selectedModules);
+      if (selectedModules.length === 0) {
+        this.showNoModulesSelectedMessage();
+        return;
+      }
+
+      if (!this.options.force) {
+        await this.checkConflicts(existingConfigs, selectedModules);
+      }
 
       if (!this.options.yes) {
-        await this.confirmInstallationPlan(selectedModules);
+        const confirmed = await this.confirmInstallationPlan(selectedModules);
+        if (!confirmed) return;
       }
 
       const installResult = await this.installModules(
@@ -70,10 +83,10 @@ export class InitFlow {
   }
 
   private showWelcome(): void {
-    if (!this.options.yes && !this.options.verbose) {
+    if (!this.options.yes) {
       console.log(chalk.cyan(DEVBOOT_LOGO));
     }
-    intro(chalk.cyan("Welcome to DevBoot!"));
+    intro(chalk.cyan("🚀 DevBoot - Modern Development Environment Setup"));
   }
 
   private async analyzeProject(projectPath: string): Promise<ProjectInfo> {
@@ -81,64 +94,131 @@ export class InitFlow {
     const projectInfo = await analyzer.analyze(projectPath);
 
     if (!this.options.yes) {
-      note(
-        `${chalk.bold("Project:")} ${projectInfo.name}\n` +
-          `${chalk.bold("Type:")} ${projectInfo.projectType}\n` +
-          `${chalk.bold("Package Manager:")} ${projectInfo.packageManager}`,
-        "Project detected"
-      );
+      const projectDetails = [
+        `${chalk.bold("📦 Project:")} ${projectInfo.name}`,
+        `${chalk.bold("🔧 Framework:")} ${this.getFrameworkDisplay(
+          projectInfo.projectType
+        )}`,
+        `${chalk.bold("📋 Package Manager:")} ${projectInfo.packageManager}`,
+      ];
+
+      if (projectInfo.hasTypeScript) {
+        projectDetails.push(`${chalk.bold("📘 TypeScript:")} ✓ Detected`);
+      }
+
+      note(projectDetails.join("\n"), "Project Analysis");
     }
 
     return projectInfo;
+  }
+
+  private getFrameworkDisplay(projectType: string): string {
+    const frameworks: Record<string, string> = {
+      nextjs: "Next.js",
+      react: "React",
+      vue: "Vue.js",
+      node: "Node.js",
+      unknown: "Unknown",
+    };
+    return frameworks[projectType] || projectType;
   }
 
   private async checkExistingConfigs(projectPath: string): Promise<string[]> {
     try {
       const configs = await ConfigChecker.checkExistingConfigs(projectPath);
 
-      if (configs.length > 0 && !this.options.yes) {
-        const configList = ConfigChecker.formatConfigList(configs);
+      if (configs.length > 0 && !this.options.yes && !this.options.force) {
+        const configList = configs
+          .map((config) => `  • ${this.getConfigDisplay(config)}`)
+          .join("\n");
+
         note(
           `Found existing configurations:\n${chalk.yellow(configList)}`,
-          "⚠️  Warning"
+          "⚠️  Existing Setup"
         );
       }
 
       return configs;
     } catch (error) {
-      if (error instanceof LogicError && !error.isRecoverable) {
-        throw error;
-      }
       logger.warn(`Config check warning: ${error}`);
       return [];
     }
+  }
+
+  private getConfigDisplay(config: string): string {
+    const displays: Record<string, string> = {
+      "eslint-prettier": "ESLint + Prettier",
+      "git-hooks": "Git Hooks (Husky)",
+      typescript: "TypeScript Config",
+      editorconfig: "EditorConfig",
+    };
+    return displays[config] || config;
+  }
+
+  private isFullyConfigured(existingConfigs: string[]): boolean {
+    const essentialModules = ["eslint-prettier", "git-hooks"];
+    return essentialModules.every((module) => existingConfigs.includes(module));
+  }
+
+  private showAlreadyConfiguredMessage(): void {
+    outro(chalk.green("✅ Your project is already fully configured!"));
+    console.log(chalk.gray("\nTo add more tools, use:"));
+    console.log(chalk.cyan("  devboot add <module-name>"));
+    console.log(chalk.gray("\nAvailable modules:"));
+    ModuleRegistry.getAll().forEach((module) => {
+      console.log(chalk.gray(`  • ${module.name} - ${module.description}`));
+    });
   }
 
   private async selectModules(
     projectInfo: ProjectInfo,
     existingConfigs: string[]
   ): Promise<string[]> {
+    if (this.options.yes) {
+      return this.getDefaultModulesForProject(projectInfo, existingConfigs);
+    }
+
     const selectedModules = await ModuleSelectionStep.selectModules({
       existingConfigs,
       projectInfo,
-      isInteractive: !this.options.yes,
+      isInteractive: true,
     });
 
-    if (selectedModules.length === 0) {
-      console.log(chalk.yellow("\n⚠  No modules selected"));
-      outro("Nothing to do. Run 'devboot init' again when you're ready!");
-      process.exit(0);
+    return selectedModules;
+  }
+
+  private getDefaultModulesForProject(
+    projectInfo: ProjectInfo,
+    existingConfigs: string[]
+  ): string[] {
+    const modules = [];
+
+    if (!existingConfigs.includes("eslint-prettier")) {
+      modules.push("eslint-prettier");
+    }
+    if (!existingConfigs.includes("git-hooks")) {
+      modules.push("git-hooks");
+    }
+    if (!existingConfigs.includes("editorconfig")) {
+      modules.push("editorconfig");
     }
 
-    return selectedModules;
+    if (projectInfo.hasTypeScript && !existingConfigs.includes("typescript")) {
+      modules.push("typescript");
+    }
+
+    return modules;
+  }
+
+  private showNoModulesSelectedMessage(): void {
+    console.log(chalk.yellow("\n⚠  No modules selected"));
+    outro("Nothing to do. Run 'devboot init' again when you're ready!");
   }
 
   private async checkConflicts(
     existingConfigs: string[],
     selectedModules: string[]
   ): Promise<void> {
-    if (this.options.force) return;
-
     const { hasConflicts, errors } = ConfigChecker.checkConflicts(
       existingConfigs,
       selectedModules
@@ -155,12 +235,12 @@ export class InitFlow {
       });
 
       const shouldContinue = await confirm({
-        message: "Continue despite conflicts?",
+        message: "Continue anyway?",
         initialValue: false,
       });
 
       if (isCancel(shouldContinue) || !shouldContinue) {
-        cancel("Setup cancelled due to conflicts");
+        cancel("Setup cancelled");
         process.exit(0);
       }
     }
@@ -168,17 +248,22 @@ export class InitFlow {
 
   private async confirmInstallationPlan(
     selectedModules: string[]
-  ): Promise<void> {
+  ): Promise<boolean> {
     const planDetails = selectedModules
       .map((mod) => {
         const module = ModuleRegistry.get(mod);
         return module
-          ? `  • ${module.displayName} - ${module.description}`
+          ? `  • ${chalk.bold(module.displayName)} - ${chalk.gray(
+              module.description
+            )}`
           : `  • ${mod}`;
       })
       .join("\n");
 
-    note(`Will set up:\n${chalk.green(planDetails)}`, "Installation plan");
+    note(
+      `The following tools will be configured:\n${chalk.green(planDetails)}`,
+      "📋 Installation Plan"
+    );
 
     const shouldProceed = await confirm({
       message: "Proceed with installation?",
@@ -187,8 +272,10 @@ export class InitFlow {
 
     if (isCancel(shouldProceed) || !shouldProceed) {
       cancel("Setup cancelled");
-      process.exit(0);
+      return false;
     }
+
+    return true;
   }
 
   private async installModules(
@@ -210,10 +297,10 @@ export class InitFlow {
 
   private showCompletionMessage(result: InstallationResult): void {
     if (result.successful.length > 0) {
-      outro(chalk.green("✨ All done!"));
+      outro(chalk.green("✨ DevBoot setup complete!"));
       this.showNextSteps(result.successful);
     } else {
-      outro(chalk.red("❌ Installation failed"));
+      outro(chalk.red("❌ Setup failed"));
     }
 
     if (result.failed.length > 0) {
@@ -225,43 +312,39 @@ export class InitFlow {
   }
 
   private showNextSteps(installedModules: string[]): void {
-    console.log("\n" + chalk.bold("Next steps:"));
+    console.log("\n" + chalk.bold("🎯 Next steps:"));
 
-    const nextSteps: Record<string, () => void> = {
-      editorconfig: () =>
-        console.log(
-          chalk.gray("  • Your editor will now use") +
-            chalk.cyan(" .editorconfig") +
-            chalk.gray(" for consistent code style")
-        ),
-      "eslint-prettier": () => {
-        console.log(
-          chalk.gray("  • Run") +
-            chalk.cyan(" npm run lint") +
-            chalk.gray(" to check your code")
-        );
-        console.log(
-          chalk.gray("  • Run") +
-            chalk.cyan(" npm run format") +
-            chalk.gray(" to format your code")
-        );
-      },
-      "git-hooks": () =>
-        console.log(
-          chalk.gray("  • Commit your code - hooks will run automatically")
-        ),
-      typescript: () =>
-        console.log(
-          chalk.gray("  • TypeScript is now configured for your project")
-        ),
+    const nextSteps: Record<string, string[]> = {
+      "eslint-prettier": [
+        `Run ${chalk.cyan("npm run lint")} to check your code`,
+        `Run ${chalk.cyan("npm run format")} to format your code`,
+      ],
+      "git-hooks": [
+        `Stage your changes with ${chalk.cyan("git add .")}`,
+        `Commit with ${chalk.cyan(
+          "git commit -m 'Add dev tools'"
+        )} - hooks will run automatically`,
+      ],
+      typescript: [
+        `TypeScript is now optimized for your ${this.getFrameworkDisplay(
+          "react"
+        )} project`,
+      ],
+      editorconfig: [
+        `Your editor will now respect ${chalk.cyan(".editorconfig")} settings`,
+      ],
     };
 
     installedModules.forEach((module) => {
       if (nextSteps[module]) {
-        nextSteps[module]();
+        nextSteps[module].forEach((step) => {
+          console.log(chalk.gray(`  • ${step}`));
+        });
       }
     });
 
+    console.log("\n" + chalk.gray("To add more tools later:"));
+    console.log(chalk.cyan("  devboot add <module-name>"));
     console.log("");
   }
 
@@ -293,8 +376,3 @@ export class InitFlow {
     process.exit(1);
   }
 }
-
-export const initFlow = async (options: InitCommandOptions): Promise<void> => {
-  const flow = new InitFlow(options);
-  await flow.execute();
-};
