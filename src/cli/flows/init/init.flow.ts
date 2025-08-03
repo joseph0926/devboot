@@ -4,7 +4,6 @@ import { ProjectAnalyzer } from "../../../core/project-analyzer";
 import { LogicError } from "../../../errors/logic.error";
 import { ModuleRegistry } from "../../../modules";
 import { ProjectInfo, InstallOptionsOnly } from "../../../types/project.type";
-import { logger } from "../../../utils/logger";
 import { ConfigChecker } from "../../helpers/config-checker";
 import { DEVBOOT_LOGO } from "../../helpers/ui";
 import {
@@ -13,6 +12,9 @@ import {
 } from "./steps/installation.step";
 import { ModuleSelectionStep } from "./steps/module-selection.step";
 import { ProjectValidationStep } from "./steps/project-validation.step";
+import { CLIErrorHandler } from "../../../errors/cli/cli-error-handler";
+import { ExitCodes } from "../../../types/exit-codes";
+import { ErrorLogger } from "../../../utils/error-logger";
 
 export interface InitCommandOptions {
   yes?: boolean;
@@ -67,7 +69,10 @@ export class InitFlow {
 
       this.showCompletionMessage(installResult);
     } catch (error) {
-      this.handleError(error);
+      CLIErrorHandler.handle(error, {
+        verbose: this.options.verbose,
+        showHelp: false,
+      });
     }
   }
 
@@ -140,7 +145,7 @@ export class InitFlow {
 
       return configs;
     } catch (error) {
-      logger.warn(`Config check warning: ${error}`);
+      ErrorLogger.logWarning(`Config check warning: ${error}`);
       return [];
     }
   }
@@ -228,10 +233,11 @@ export class InitFlow {
       console.log(chalk.red("\n⚠️  Configuration conflicts detected:"));
 
       errors.forEach((error) => {
-        console.log(chalk.red(`  • ${error.message}`));
-        if (error.solution) {
-          console.log(chalk.yellow(`    💡 ${error.solution}`));
-        }
+        ErrorLogger.logError(error, {
+          verbose: false,
+          showSolution: true,
+          prefix: false,
+        });
       });
 
       const shouldContinue = await confirm({
@@ -241,7 +247,7 @@ export class InitFlow {
 
       if (isCancel(shouldContinue) || !shouldContinue) {
         cancel("Setup cancelled");
-        process.exit(0);
+        process.exit(ExitCodes.USER_CANCELLED);
       }
     }
   }
@@ -304,10 +310,7 @@ export class InitFlow {
     }
 
     if (result.failed.length > 0) {
-      console.log(chalk.red("\n⚠️  Failed modules:"));
-      result.failed.forEach(({ module, error }) => {
-        console.log(chalk.red(`  • ${module}: ${error.message}`));
-      });
+      ErrorLogger.logErrorSummary(result.failed.map((f) => f.error));
     }
   }
 
@@ -346,33 +349,5 @@ export class InitFlow {
     console.log("\n" + chalk.gray("To add more tools later:"));
     console.log(chalk.cyan("  devboot add <module-name>"));
     console.log("");
-  }
-
-  private handleError(error: unknown): never {
-    console.log("");
-
-    if (error instanceof LogicError) {
-      logger.error(error.message);
-
-      if (error.solution) {
-        console.log(chalk.yellow(`\n💡 ${error.solution}`));
-      }
-
-      if (error.context && this.options.verbose) {
-        console.log(chalk.gray("\nError context:"));
-        console.log(chalk.gray(JSON.stringify(error.context, null, 2)));
-      }
-    } else if (error instanceof Error) {
-      logger.error(error.message);
-
-      if (this.options.verbose) {
-        console.log(chalk.gray("\nStack trace:"));
-        console.log(chalk.gray(error.stack));
-      }
-    } else {
-      logger.error("An unexpected error occurred");
-    }
-
-    process.exit(1);
   }
 }

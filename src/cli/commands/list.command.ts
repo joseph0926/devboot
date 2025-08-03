@@ -4,6 +4,9 @@ import { log } from "@clack/prompts";
 import { ModuleRegistry } from "../../modules";
 import { readPackageJson } from "../../utils/file";
 import { logger } from "../../utils/logger";
+import { CLIErrorHandler } from "../../errors/cli/cli-error-handler";
+import { ExitCodes } from "../../types/exit-codes";
+import { ErrorLogger } from "../../utils/error-logger";
 
 export class ListCommand {
   static register(program: Command): void {
@@ -13,7 +16,14 @@ export class ListCommand {
       .description("List available modules")
       .option("-i, --installed", "Show only installed modules")
       .action(async (options) => {
-        await ListCommand.execute(options);
+        try {
+          await ListCommand.execute(options);
+        } catch (error) {
+          CLIErrorHandler.handle(error, {
+            verbose: false,
+            showHelp: false,
+          });
+        }
       });
   }
 
@@ -30,8 +40,10 @@ export class ListCommand {
       installedModules = await this.getInstalledModules(projectPath);
     } catch (error) {
       if (options.installed) {
-        log.warn("Not in a Node.js project - cannot check installed modules");
-        process.exit(0);
+        ErrorLogger.logWarning(
+          "Not in a Node.js project - cannot check installed modules"
+        );
+        process.exit(ExitCodes.SUCCESS);
       }
     }
 

@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { AddFlow } from "../flows/add/add.flow";
 import { ModuleInstaller } from "../../core/installer";
+import { CLIErrorHandler } from "../../errors/cli/cli-error-handler";
 
 export class AddCommand {
   static register(program: Command): void {
@@ -14,15 +15,22 @@ export class AddCommand {
         "Show what would be installed without making changes"
       )
       .action(async (modules: string[], options) => {
-        const moduleInstaller = new ModuleInstaller();
-        const addFlow = new AddFlow(moduleInstaller);
+        try {
+          const moduleInstaller = new ModuleInstaller();
+          const addFlow = new AddFlow(moduleInstaller);
 
-        await addFlow.execute({
-          modules,
-          noInstall: !options.install,
-          verbose: options.verbose || false,
-          dryRun: options.dryRun || false,
-        });
+          await addFlow.execute({
+            modules,
+            noInstall: !options.install,
+            verbose: options.verbose || false,
+            dryRun: options.dryRun || false,
+          });
+        } catch (error) {
+          CLIErrorHandler.handle(error, {
+            verbose: options.verbose,
+            showHelp: true,
+          });
+        }
       });
   }
 }

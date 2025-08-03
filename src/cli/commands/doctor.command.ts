@@ -6,6 +6,8 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { ModuleRegistry } from "../../modules";
+import { CLIErrorHandler } from "../../errors/cli/cli-error-handler";
+import { ErrorLogger } from "../../utils/error-logger";
 
 const execAsync = promisify(exec);
 
@@ -21,7 +23,14 @@ export class DoctorCommand {
       .command("doctor")
       .description("Check your DevBoot setup")
       .action(async () => {
-        await DoctorCommand.execute();
+        try {
+          await DoctorCommand.execute();
+        } catch (error) {
+          CLIErrorHandler.handle(error, {
+            verbose: true,
+            showHelp: false,
+          });
+        }
       });
   }
 
@@ -251,13 +260,16 @@ export class DoctorCommand {
     log.message("");
 
     if (hasErrors) {
-      log.error(
-        "Some critical issues found. Please fix them before proceeding."
+      ErrorLogger.logError(
+        new Error(
+          "Some critical issues found. Please fix them before proceeding."
+        ),
+        { verbose: false }
       );
     } else if (hasWarnings) {
-      log.warn("Some warnings found, but you can proceed.");
+      ErrorLogger.logWarning("Some warnings found, but you can proceed.");
     } else {
-      log.success("Everything looks good!");
+      ErrorLogger.logInfo("Everything looks good!");
     }
   }
 }

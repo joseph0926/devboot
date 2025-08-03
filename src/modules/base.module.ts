@@ -4,12 +4,13 @@ import path from "path";
 import { logger } from "../utils/logger.js";
 import { BaseError } from "../errors/base.error.js";
 import { SimpleLogicError } from "../errors/logic.error.js";
-import { LogicErrorCodes } from "../types/error.type.js";
+import { FSError, isNodeError, LogicErrorCodes } from "../types/error.type.js";
 import {
   FilePermissionError,
   FileOperationError,
   FileNotFoundError,
 } from "../errors/logic/file.error.js";
+import { ErrorLogger } from "../utils/error-logger.js";
 
 export interface ModuleConfig {
   name: string;
@@ -258,40 +259,46 @@ export abstract class BaseModule {
 
       try {
         await mkdir(dir, { recursive: true });
-      } catch (error: any) {
-        if (error.code === "EACCES") {
-          throw new FilePermissionError(
-            `Permission denied creating directory: ${dir}`,
-            {
-              path: dir,
-              operation: "mkdir",
-              errorCode: error.code,
-            }
-          );
+      } catch (error) {
+        if (isNodeError(error)) {
+          const fsError = error as FSError;
+          if (fsError.code === "EACCES" || fsError.code === "EPERM") {
+            throw new FilePermissionError(
+              `Permission denied creating directory: ${dir}`,
+              {
+                path: dir,
+                operation: "mkdir",
+                errorCode: fsError.code,
+              }
+            );
+          }
         }
         throw error;
       }
 
       try {
         await writeFile(filePath, content, "utf-8");
-      } catch (error: any) {
-        if (error.code === "EACCES") {
-          throw new FilePermissionError(
-            `Permission denied writing file: ${filePath}`,
-            {
-              path: filePath,
-              operation: "write",
-              errorCode: error.code,
-            }
-          );
-        }
-        if (error.code === "ENOSPC") {
-          throw new SimpleLogicError(
-            LogicErrorCodes.DISK_FULL,
-            "Not enough disk space",
-            false,
-            { path: filePath }
-          );
+      } catch (error) {
+        if (isNodeError(error)) {
+          const fsError = error as FSError;
+          if (fsError.code === "EACCES" || fsError.code === "EPERM") {
+            throw new FilePermissionError(
+              `Permission denied writing file: ${filePath}`,
+              {
+                path: filePath,
+                operation: "write",
+                errorCode: fsError.code,
+              }
+            );
+          }
+          if (fsError.code === "ENOSPC") {
+            throw new SimpleLogicError(
+              LogicErrorCodes.DISK_FULL,
+              "Not enough disk space",
+              false,
+              { path: filePath }
+            );
+          }
         }
         throw error;
       }
@@ -299,7 +306,9 @@ export abstract class BaseModule {
       result.installedFiles?.push(path.relative(options.projectPath, filePath));
 
       if (options.verbose) {
-        logger.info(`Created: ${path.relative(options.projectPath, filePath)}`);
+        ErrorLogger.logInfo(
+          `Created: ${path.relative(options.projectPath, filePath)}`
+        );
       }
 
       result.rollbackActions?.push(async () => {
@@ -337,22 +346,25 @@ export abstract class BaseModule {
     try {
       try {
         originalContent = await readFile(filePath, "utf-8");
-      } catch (error: any) {
-        if (error.code === "ENOENT") {
-          throw new FileNotFoundError(`File not found: ${filePath}`, {
-            path: filePath,
-            operation: "read",
-          });
-        }
-        if (error.code === "EACCES") {
-          throw new FilePermissionError(
-            `Permission denied reading file: ${filePath}`,
-            {
+      } catch (error) {
+        if (isNodeError(error)) {
+          const fsError = error as FSError;
+          if (fsError.code === "ENOENT") {
+            throw new FileNotFoundError(`File not found: ${filePath}`, {
               path: filePath,
               operation: "read",
-              errorCode: error.code,
-            }
-          );
+            });
+          }
+          if (fsError.code === "EACCES" || fsError.code === "EPERM") {
+            throw new FilePermissionError(
+              `Permission denied reading file: ${filePath}`,
+              {
+                path: filePath,
+                operation: "read",
+                errorCode: fsError.code,
+              }
+            );
+          }
         }
         throw error;
       }
@@ -375,16 +387,19 @@ export abstract class BaseModule {
 
       try {
         await writeFile(filePath, modifiedContent, "utf-8");
-      } catch (error: any) {
-        if (error.code === "EACCES") {
-          throw new FilePermissionError(
-            `Permission denied writing file: ${filePath}`,
-            {
-              path: filePath,
-              operation: "write",
-              errorCode: error.code,
-            }
-          );
+      } catch (error) {
+        if (isNodeError(error)) {
+          const fsError = error as FSError;
+          if (fsError.code === "EACCES" || fsError.code === "EPERM") {
+            throw new FilePermissionError(
+              `Permission denied writing file: ${filePath}`,
+              {
+                path: filePath,
+                operation: "write",
+                errorCode: fsError.code,
+              }
+            );
+          }
         }
         throw error;
       }
@@ -392,7 +407,7 @@ export abstract class BaseModule {
       result.modifiedFiles?.push(path.relative(options.projectPath, filePath));
 
       if (options.verbose) {
-        logger.info(
+        ErrorLogger.logInfo(
           `Modified: ${path.relative(options.projectPath, filePath)}`
         );
       }
@@ -422,7 +437,7 @@ export abstract class BaseModule {
       try {
         await action();
       } catch (error) {
-        logger.error(`Rollback action failed: ${error}`);
+        ErrorLogger.logError(error, { verbose: false });
       }
     }
   }

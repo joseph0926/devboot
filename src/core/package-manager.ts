@@ -10,6 +10,8 @@ import {
   PackageManagerExecutionError,
   PackageManagerNotFoundError,
 } from "../errors/logic/package.error.js";
+import { isNodeError, isNetworkError, ExecError } from "../types/error.type.js";
+import { ErrorLogger } from "../utils/error-logger.js";
 
 const execAsync = promisify(exec);
 
@@ -132,57 +134,62 @@ export class PackageManagerService {
           }
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof BaseError) {
         throw error;
       }
 
-      if (
-        error.code === "ENOENT" ||
-        error.message?.includes("command not found")
-      ) {
-        throw new PackageManagerNotFoundError(
-          `${options.packageManager} is not installed`,
-          {
+      // 타입 안전한 에러 처리
+      if (isNodeError(error)) {
+        if (error.code === "ENOENT") {
+          throw new PackageManagerNotFoundError(
+            `${options.packageManager} is not installed`,
+            {
+              packageManager: options.packageManager,
+              errorCode: error.code,
+            }
+          );
+        }
+
+        if (error.code === "EACCES" || error.code === "EPERM") {
+          throw new SimpleLogicError(
+            LogicErrorCodes.PERMISSION_DENIED,
+            "Permission denied while installing packages",
+            false,
+            {
+              command,
+              errorCode: error.code,
+              packages,
+            },
+            "Try running with sudo or check npm/yarn permissions"
+          );
+        }
+
+        if (isNetworkError(error)) {
+          throw new SimpleLogicError(
+            LogicErrorCodes.NETWORK_ERROR,
+            "Network error while installing packages",
+            true,
+            {
+              command,
+              errorCode: error.code,
+              packages,
+            },
+            "Check your internet connection and try again"
+          );
+        }
+      }
+
+      // ExecError 타입 처리
+      const execError = error as ExecError;
+      if (execError.stderr) {
+        if (execError.stderr.includes("E404")) {
+          throw new PackageInstallError("One or more packages not found", {
+            packages,
             packageManager: options.packageManager,
-            errorCode: error.code,
-          }
-        );
-      }
-
-      if (
-        error.code === "EACCES" ||
-        error.message?.includes("permission denied")
-      ) {
-        throw new SimpleLogicError(
-          LogicErrorCodes.PERMISSION_DENIED,
-          "Permission denied while installing packages",
-          false,
-          {
-            command,
-            errorCode: error.code,
-            packages,
-          },
-          "Try running with sudo or check npm/yarn permissions"
-        );
-      }
-
-      if (
-        error.message?.includes("ENETUNREACH") ||
-        error.message?.includes("ETIMEDOUT") ||
-        error.message?.includes("getaddrinfo")
-      ) {
-        throw new SimpleLogicError(
-          LogicErrorCodes.NETWORK_ERROR,
-          "Network error while installing packages",
-          true,
-          {
-            command,
-            errorMessage: error.message,
-            packages,
-          },
-          "Check your internet connection and try again"
-        );
+            stderr: execError.stderr,
+          });
+        }
       }
 
       throw error;
@@ -244,42 +251,38 @@ export class PackageManagerService {
       }
 
       if (stderr && !stderr.includes("warning")) {
-        logger.warn(`Uninstall warnings: ${stderr}`);
+        ErrorLogger.logWarning(`Uninstall warnings: ${stderr}`);
       }
 
       spinner.succeed("Packages uninstalled successfully");
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       spinner.fail("Failed to uninstall packages");
 
-      if (
-        error.code === "ENOENT" ||
-        error.message?.includes("command not found")
-      ) {
-        throw new PackageManagerNotFoundError(
-          `${options.packageManager} is not installed`,
-          {
-            packageManager: options.packageManager,
-            errorCode: error.code,
-          }
-        );
-      }
+      if (isNodeError(error)) {
+        if (error.code === "ENOENT") {
+          throw new PackageManagerNotFoundError(
+            `${options.packageManager} is not installed`,
+            {
+              packageManager: options.packageManager,
+              errorCode: error.code,
+            }
+          );
+        }
 
-      if (
-        error.code === "EACCES" ||
-        error.message?.includes("permission denied")
-      ) {
-        throw new SimpleLogicError(
-          LogicErrorCodes.PERMISSION_DENIED,
-          "Permission denied while uninstalling packages",
-          false,
-          {
-            command,
-            errorCode: error.code,
-            packages,
-          },
-          "Try running with sudo or check permissions"
-        );
+        if (error.code === "EACCES" || error.code === "EPERM") {
+          throw new SimpleLogicError(
+            LogicErrorCodes.PERMISSION_DENIED,
+            "Permission denied while uninstalling packages",
+            false,
+            {
+              command,
+              errorCode: error.code,
+              packages,
+            },
+            "Try running with sudo or check permissions"
+          );
+        }
       }
 
       const errorMessage =

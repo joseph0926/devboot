@@ -67,3 +67,101 @@ export const ErrorCodes = {
 } as const;
 
 export type ErrorCode = CLIErrorCode | LogicErrorCode;
+
+export interface NodeError extends Error {
+  code?: string;
+  errno?: number;
+  syscall?: string;
+  path?: string;
+  dest?: string;
+  port?: number;
+  address?: string;
+}
+
+export interface FSError extends NodeError {
+  code:
+    | "ENOENT"
+    | "EACCES"
+    | "EEXIST"
+    | "EISDIR"
+    | "ENOTDIR"
+    | "ENOSPC"
+    | "EPERM";
+  path: string;
+  syscall: "open" | "read" | "write" | "unlink" | "mkdir" | "rmdir" | "stat";
+}
+
+export interface NetworkError extends NodeError {
+  code:
+    | "ECONNREFUSED"
+    | "ECONNRESET"
+    | "ETIMEDOUT"
+    | "ENETUNREACH"
+    | "ENOTFOUND";
+  address?: string;
+  port?: number;
+}
+
+export interface ExecError extends NodeError {
+  killed?: boolean;
+  signal?: NodeJS.Signals;
+  cmd?: string;
+  stdout?: string;
+  stderr?: string;
+}
+
+export function isNodeError(error: unknown): error is NodeError {
+  return error instanceof Error && "code" in error;
+}
+
+export function isFSError(error: unknown): error is FSError {
+  return (
+    isNodeError(error) &&
+    [
+      "ENOENT",
+      "EACCES",
+      "EEXIST",
+      "EISDIR",
+      "ENOTDIR",
+      "ENOSPC",
+      "EPERM",
+    ].includes(error.code || "")
+  );
+}
+
+export function isNetworkError(error: unknown): error is NetworkError {
+  return (
+    isNodeError(error) &&
+    [
+      "ECONNREFUSED",
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "ENETUNREACH",
+      "ENOTFOUND",
+    ].includes(error.code || "")
+  );
+}
+
+export function isExecError(error: unknown): error is ExecError {
+  return (
+    isNodeError(error) &&
+    ("killed" in error || "signal" in error || "cmd" in error)
+  );
+}
+
+export function mapNodeErrorToLogicError(
+  nodeError: NodeError
+): LogicErrorCode | null {
+  const mapping: Record<string, LogicErrorCode> = {
+    ENOENT: LogicErrorCodes.FILE_NOT_FOUND,
+    EACCES: LogicErrorCodes.FILE_PERMISSION_ERROR,
+    EPERM: LogicErrorCodes.PERMISSION_DENIED,
+    ENOSPC: LogicErrorCodes.DISK_FULL,
+    ECONNREFUSED: LogicErrorCodes.NETWORK_ERROR,
+    ECONNRESET: LogicErrorCodes.NETWORK_ERROR,
+    ETIMEDOUT: LogicErrorCodes.NETWORK_ERROR,
+    ENETUNREACH: LogicErrorCodes.NETWORK_ERROR,
+  };
+
+  return mapping[nodeError.code || ""] || null;
+}
