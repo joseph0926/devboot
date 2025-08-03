@@ -1,17 +1,65 @@
 import fs from "fs-extra";
 import path from "path";
 import type { PackageJson } from "../types/file.type";
+import { SimpleLogicError } from "../errors/logic.error";
+import { LogicErrorCodes } from "../types/error.type";
+import {
+  ProjectInvalidError,
+  ProjectNotFoundError,
+} from "../errors/logic/project.error";
 
 export async function readPackageJson(
   projectPath: string
 ): Promise<PackageJson> {
   const packageJsonPath = path.join(projectPath, "package.json");
 
-  if (!(await fs.pathExists(packageJsonPath))) {
-    throw new Error("package.json not found. Are you in a Node.js project?");
+  if (!(await fileExists(packageJsonPath))) {
+    throw new ProjectNotFoundError(
+      "No package.json found in project directory",
+      {
+        projectPath,
+        searchedPath: packageJsonPath,
+        hasPackageJson: false,
+        suggestion: "npm init",
+      }
+    );
   }
 
-  return await fs.readJson(packageJsonPath);
+  try {
+    const content = await fs.readFile(packageJsonPath, "utf-8");
+    const parsed = JSON.parse(content);
+
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("package.json must be an object");
+    }
+
+    return parsed as PackageJson;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new ProjectInvalidError(
+        "Invalid package.json format",
+        {
+          projectPath,
+          hasPackageJson: true,
+          parseError: error.message,
+        },
+        error
+      );
+    }
+
+    throw new SimpleLogicError(
+      LogicErrorCodes.FILE_READ_ERROR,
+      error instanceof Error
+        ? `Failed to read package.json: ${error.message}`
+        : "Failed to read package.json",
+      false,
+      {
+        packageJsonPath,
+        errorCode: (error as any).code,
+      },
+      "Check file permissions and try again."
+    );
+  }
 }
 
 export async function writePackageJson(

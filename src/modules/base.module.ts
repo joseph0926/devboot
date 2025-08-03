@@ -2,6 +2,14 @@ import type { ProjectContext } from "../types/project.type.js";
 import { writeFile, unlink, readFile, mkdir } from "fs/promises";
 import path from "path";
 import { logger } from "../utils/logger.js";
+import { BaseError } from "../errors/base.error.js";
+import { SimpleLogicError } from "../errors/logic.error.js";
+import { LogicErrorCodes } from "../types/error.type.js";
+import {
+  FilePermissionError,
+  FileOperationError,
+  FileNotFoundError,
+} from "../errors/logic/file.error.js";
 
 export interface ModuleConfig {
   name: string;
@@ -23,7 +31,7 @@ export interface InstallResult {
   installedFiles?: string[];
   installedPackages?: string[];
   modifiedFiles?: string[];
-  errors?: Error[];
+  errors?: BaseError[];
   hints?: string[];
   rollbackActions?: (() => Promise<void>)[];
 }
@@ -84,7 +92,22 @@ export abstract class BaseModule {
       const validation = await this.validate(options);
 
       if (!validation.valid) {
-        result.errors = validation.errors.map((err) => new Error(err));
+        result.errors = validation.errors.map(
+          (err) =>
+            new SimpleLogicError(
+              LogicErrorCodes.MODULE_CONFIG_INVALID,
+              err,
+              false,
+              {
+                module: this.name,
+                validationErrors: validation.errors,
+                conflictingModules: validation.conflictingModules,
+              },
+              validation.conflictingModules?.length
+                ? "Use --force to override existing configurations"
+                : undefined
+            )
+        );
 
         if (validation.conflictingModules?.length) {
           result.hints?.push("Use --force to override existing configurations");
@@ -139,61 +162,49 @@ export abstract class BaseModule {
         if (options.verbose) {
           logger.info("Rolling back changes...");
         }
-        await this.rollback(result.rollbackActions);
+
+        try {
+          await this.rollback(result.rollbackActions);
+        } catch (rollbackError) {
+          const rollbackErrorObj = new SimpleLogicError(
+            LogicErrorCodes.ROLLBACK_FAILED,
+            "Failed to rollback changes",
+            false,
+            {
+              module: this.name,
+              originalError:
+                error instanceof Error ? error.message : String(error),
+              rollbackError:
+                rollbackError instanceof Error
+                  ? rollbackError.message
+                  : String(rollbackError),
+            }
+          );
+          result.errors?.push(rollbackErrorObj);
+        }
       }
 
-      result.errors?.push(error as Error);
+      if (error instanceof BaseError) {
+        result.errors?.push(error);
+      } else {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        result.errors?.push(
+          new SimpleLogicError(
+            LogicErrorCodes.MODULE_INSTALL_FAILED,
+            `Module installation failed: ${errorMessage}`,
+            false,
+            {
+              module: this.name,
+              originalError: errorMessage,
+            }
+          )
+        );
+      }
+
       result.success = false;
       return result;
     }
-  }
-
-  abstract uninstall?(options: InstallOptions): Promise<InstallResult>;
-
-  private async createFile(
-    filePath: string,
-    content: string,
-    result: InstallResult,
-    options: InstallOptions
-  ): Promise<void> {
-    const dir = path.dirname(filePath);
-    await mkdir(dir, { recursive: true });
-
-    await writeFile(filePath, content, "utf-8");
-    result.installedFiles?.push(path.relative(options.projectPath, filePath));
-
-    if (options.verbose) {
-      logger.info(`Created: ${path.relative(options.projectPath, filePath)}`);
-    }
-
-    result.rollbackActions?.push(async () => {
-      try {
-        await unlink(filePath);
-      } catch (error) {
-        logger.debug(`Rollback: File already removed: ${filePath}`);
-      }
-    });
-  }
-
-  private async modifyFile(
-    filePath: string,
-    modifier: FileModifier,
-    result: InstallResult,
-    options: InstallOptions
-  ): Promise<void> {
-    const originalContent = await readFile(filePath, "utf-8");
-    const modifiedContent = await modifier(originalContent);
-
-    await writeFile(filePath, modifiedContent, "utf-8");
-    result.modifiedFiles?.push(path.relative(options.projectPath, filePath));
-
-    if (options.verbose) {
-      logger.info(`Modified: ${path.relative(options.projectPath, filePath)}`);
-    }
-
-    result.rollbackActions?.push(async () => {
-      await writeFile(filePath, originalContent, "utf-8");
-    });
   }
 
   private async previewChanges(options: InstallOptions): Promise<void> {
@@ -226,6 +237,178 @@ export abstract class BaseModule {
       Object.entries(deps.devDependencies || {}).forEach(([pkg, version]) => {
         logger.info(`  📦 ${pkg}@${version} (dev)`);
       });
+    }
+  }
+
+  abstract uninstall?(options: InstallOptions): Promise<InstallResult>;
+
+  private async createFile(
+    filePath: string,
+    content: string,
+    result: InstallResult,
+    options: InstallOptions
+  ): Promise<void> {
+    try {
+      const dir = path.dirname(filePath);
+
+      try {
+        await mkdir(dir, { recursive: true });
+      } catch (error: any) {
+        if (error.code === "EACCES") {
+          throw new FilePermissionError(
+            `Permission denied creating directory: ${dir}`,
+            {
+              path: dir,
+              operation: "mkdir",
+              errorCode: error.code,
+            }
+          );
+        }
+        throw error;
+      }
+
+      try {
+        await writeFile(filePath, content, "utf-8");
+      } catch (error: any) {
+        if (error.code === "EACCES") {
+          throw new FilePermissionError(
+            `Permission denied writing file: ${filePath}`,
+            {
+              path: filePath,
+              operation: "write",
+              errorCode: error.code,
+            }
+          );
+        }
+        if (error.code === "ENOSPC") {
+          throw new SimpleLogicError(
+            LogicErrorCodes.DISK_FULL,
+            "Not enough disk space",
+            false,
+            { path: filePath }
+          );
+        }
+        throw error;
+      }
+
+      result.installedFiles?.push(path.relative(options.projectPath, filePath));
+
+      if (options.verbose) {
+        logger.info(`Created: ${path.relative(options.projectPath, filePath)}`);
+      }
+
+      result.rollbackActions?.push(async () => {
+        try {
+          await unlink(filePath);
+        } catch (error) {
+          logger.debug(`Rollback: File already removed: ${filePath}`);
+        }
+      });
+    } catch (error) {
+      if (error instanceof BaseError) {
+        throw error;
+      }
+
+      throw new FileOperationError(
+        `Failed to create file: ${filePath}`,
+        {
+          path: filePath,
+          operation: "create",
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+        error
+      );
+    }
+  }
+
+  private async modifyFile(
+    filePath: string,
+    modifier: FileModifier,
+    result: InstallResult,
+    options: InstallOptions
+  ): Promise<void> {
+    let originalContent: string;
+
+    try {
+      try {
+        originalContent = await readFile(filePath, "utf-8");
+      } catch (error: any) {
+        if (error.code === "ENOENT") {
+          throw new FileNotFoundError(`File not found: ${filePath}`, {
+            path: filePath,
+            operation: "read",
+          });
+        }
+        if (error.code === "EACCES") {
+          throw new FilePermissionError(
+            `Permission denied reading file: ${filePath}`,
+            {
+              path: filePath,
+              operation: "read",
+              errorCode: error.code,
+            }
+          );
+        }
+        throw error;
+      }
+
+      let modifiedContent: string;
+      try {
+        modifiedContent = await modifier(originalContent);
+      } catch (error) {
+        throw new SimpleLogicError(
+          LogicErrorCodes.FILE_MODIFICATION_FAILED,
+          `Failed to modify file content: ${filePath}`,
+          false,
+          {
+            path: filePath,
+            modifierError:
+              error instanceof Error ? error.message : String(error),
+          }
+        );
+      }
+
+      try {
+        await writeFile(filePath, modifiedContent, "utf-8");
+      } catch (error: any) {
+        if (error.code === "EACCES") {
+          throw new FilePermissionError(
+            `Permission denied writing file: ${filePath}`,
+            {
+              path: filePath,
+              operation: "write",
+              errorCode: error.code,
+            }
+          );
+        }
+        throw error;
+      }
+
+      result.modifiedFiles?.push(path.relative(options.projectPath, filePath));
+
+      if (options.verbose) {
+        logger.info(
+          `Modified: ${path.relative(options.projectPath, filePath)}`
+        );
+      }
+
+      result.rollbackActions?.push(async () => {
+        await writeFile(filePath, originalContent, "utf-8");
+      });
+    } catch (error) {
+      if (error instanceof BaseError) {
+        throw error;
+      }
+
+      throw new FileOperationError(
+        `Failed to modify file: ${filePath}`,
+        {
+          path: filePath,
+          operation: "modify",
+          originalError: error instanceof Error ? error.message : String(error),
+        },
+        error
+      );
     }
   }
 

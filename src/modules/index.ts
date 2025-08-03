@@ -26,4 +26,8 @@ export class ModuleRegistry {
   static has(name: string): boolean {
     return this.modules.has(name);
   }
+
+  static list(): string[] {
+    return Array.from(this.modules.keys());
+  }
 }

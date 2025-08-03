@@ -6,10 +6,40 @@ import type {
   PackageManager,
 } from "../types/project.type.js";
 import path from "path";
+import { SimpleLogicError } from "../errors/logic.error.js";
+import { LogicErrorCodes } from "../types/error.type.js";
+import { ProjectInvalidError } from "../errors/logic/project.error.js";
 
 export class ProjectAnalyzer {
   async analyze(projectPath: string): Promise<ProjectInfo> {
-    const packageJson = await readPackageJson(projectPath);
+    if (!(await fileExists(projectPath))) {
+      throw new SimpleLogicError(
+        LogicErrorCodes.PROJECT_NOT_FOUND,
+        `Project path does not exist: ${projectPath}`,
+        false,
+        { projectPath, currentDir: process.cwd() },
+        "Please check the project path and try again."
+      );
+    }
+
+    let packageJson: PackageJson;
+    try {
+      packageJson = await readPackageJson(projectPath);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new ProjectInvalidError(
+          error.message,
+          {
+            projectPath,
+            hasPackageJson: await fileExists(
+              path.join(projectPath, "package.json")
+            ),
+          },
+          error
+        );
+      }
+      throw error;
+    }
 
     return {
       projectPath,

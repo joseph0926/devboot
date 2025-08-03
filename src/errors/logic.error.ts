@@ -1,14 +1,10 @@
-import { ErrorCode } from "../types/error.type";
+import { LogicErrorCode } from "../types/error.type";
 import { BaseError } from "./base.error";
 
-export abstract class LogicError extends BaseError {
-  abstract readonly code: ErrorCode;
-  abstract readonly isRecoverable: boolean;
-
-  constructor(message: string, context?: Record<string, any>, cause?: unknown) {
-    super(message, context, cause);
-  }
-
+export abstract class LogicError<TContext = unknown> extends BaseError<
+  LogicErrorCode,
+  TContext
+> {
   get solution(): string | undefined {
     return undefined;
   }
@@ -16,7 +12,7 @@ export abstract class LogicError extends BaseError {
 
 export class SimpleLogicError extends LogicError {
   constructor(
-    public readonly code: ErrorCode,
+    public readonly code: LogicErrorCode,
     message: string,
     public readonly isRecoverable: boolean = true,
     context?: Record<string, any>,
