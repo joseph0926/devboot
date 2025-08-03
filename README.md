@@ -5,11 +5,7 @@ Zero-config dev environment setup for modern web projects. Add ESLint, Prettier,
 [![npm version](https://img.shields.io/npm/v/devboot.svg)](https://www.npmjs.com/package/devboot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
-
 https://github.com/user-attachments/assets/4b4dfa88-fda8-4de6-9199-2aeab2f1f354
-
-
 
 ## Why DevBoot?
 
@@ -57,24 +53,17 @@ DevBoot automates all of this. Run one command, answer a few questions, and get 
 
 ### Initialize DevBoot in your project
 
-```bash
-# ...
-```
-
 ### Development
 
 ```bash
-# Clone the repo
 git clone https://github.com/joseph0926/devboot.git
 
-# Install dependencies
 pnpm install
 
-# Run tests
-pnpm test
-
-# Build
-pnpm build
+pnpm cli init
+pnpm cli add {module}
+pnpm cli list
+pnpm cli doctor
 ```
 
 ## License
