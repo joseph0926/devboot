@@ -17,6 +17,7 @@ export interface ModuleConfig {
   description: string;
   detectFiles: string[];
   conflicts?: string[];
+  version?: string;
 }
 
 export interface InstallOptions extends ProjectContext {
@@ -58,6 +59,10 @@ export abstract class BaseModule {
 
   get description(): string {
     return this.config.description;
+  }
+
+  get version(): string | undefined {
+    return this.config.version;
   }
 
   abstract isInstalled(projectPath: string): Promise<boolean>;
