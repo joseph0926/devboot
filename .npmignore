@@ -1,0 +1,49 @@
+# Source files
+src/
+tsconfig.json
+tsup.config.ts
+
+# Development files
+.editorconfig
+.prettierrc*
+.prettierignore
+.github/
+*.log
+logs/
+
+# Tests
+test/
+tests/
+__tests__/
+*.test.*
+*.spec.*
+coverage/
+
+# Development dependencies
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env*
+
+# Build artifacts (keep only dist/)
+*.tsbuildinfo
+
+# Development scripts
+scripts/
+docs/
+
+# CI/CD
+.github/

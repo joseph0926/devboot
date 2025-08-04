@@ -139,7 +139,6 @@ export class PackageManagerService {
         throw error;
       }
 
-      // 타입 안전한 에러 처리
       if (isNodeError(error)) {
         if (error.code === "ENOENT") {
           throw new PackageManagerNotFoundError(
@@ -180,7 +179,6 @@ export class PackageManagerService {
         }
       }
 
-      // ExecError 타입 처리
       const execError = error as ExecError;
       if (execError.stderr) {
         if (execError.stderr.includes("E404")) {

@@ -137,7 +137,6 @@ export class TypeScriptModule extends BaseModule {
           const result = await builder.build(options);
           this.generatedConfig = result.config;
           this.additionalFiles = result.additionalFiles;
-          // presetKey stored in result if needed
           config = this.generatedConfig;
         } catch (error) {
           if (

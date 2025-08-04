@@ -9,6 +9,8 @@ export default defineConfig({
   dts: true,
   clean: true,
   shims: true,
-  minify: false,
+  minify: process.env.NODE_ENV === "production",
   target: "node22",
+  sourcemap: true,
+  splitting: false,
 });

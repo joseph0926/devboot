@@ -574,7 +574,7 @@ export class TypeScriptConfigBuilder {
 
     const strictness = await prompts.select({
       message: "Choose strictness level",
-      options: COMPILER_OPTIONS.strictness, // keep original (English) labels
+      options: COMPILER_OPTIONS.strictness,
     });
 
     if (prompts.isCancel(strictness)) {

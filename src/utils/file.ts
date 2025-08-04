@@ -126,7 +126,6 @@ export async function fileExists(filePath: string): Promise<boolean> {
   try {
     return await fs.pathExists(filePath);
   } catch (error) {
-    // 파일 존재 확인 중 에러는 false로 처리
     return false;
   }
 }

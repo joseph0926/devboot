@@ -5,13 +5,19 @@
   "keywords": [
     "cli",
     "dev-tools",
-    "eslint",
-    "prettier",
+    "devboot",
     "typescript",
+    "prettier",
+    "editorconfig",
+    "setup",
+    "configuration",
+    "development",
     "dx",
     "developer-experience",
     "tooling",
-    "automation"
+    "automation",
+    "scaffold",
+    "boilerplate"
   ],
   "homepage": "https://github.com/joseph0926/devboot#readme",
   "bugs": {
@@ -40,10 +46,12 @@
   },
   "files": [
     "dist",
-    "templates"
+    "README.md",
+    "LICENCE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "NODE_ENV=production tsup",
+    "build:dev": "tsup",
     "dev": "tsup --watch",
     "cli": "tsx src/cli/index.ts",
     "test": "vitest",
@@ -51,7 +59,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "npm run typecheck && npm run build",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
@@ -62,6 +71,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
