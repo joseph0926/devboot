@@ -7,6 +7,7 @@ import {
   ADDITIONAL_OPTIONS,
   detectBestPreset,
   getCustomStrictnessOptions,
+  type TSConfigPreset,
 } from "./presets.js";
 import { fileExists } from "../../utils/file.js";
 import path from "path";
@@ -28,26 +29,267 @@ export class TypeScriptConfigBuilder {
 
     await this.checkExistingConfig(context);
 
+    const setupMode = await prompts.select({
+      message: "How would you like to set it up?",
+      options: [
+        {
+          value: "quick",
+          label: "🚀 Quick setup",
+          hint: "Automatically choose an optimized preset for your project",
+        },
+        {
+          value: "custom",
+          label: "🛠️  Custom setup",
+          hint: "Configure step-by-step with fine-grained options",
+        },
+      ],
+    });
+
+    if (prompts.isCancel(setupMode)) {
+      prompts.cancel("Setup canceled");
+      throw new Error("Cancelled");
+    }
+
+    if (setupMode === "quick") {
+      return await this.quickSetup(context);
+    } else {
+      return await this.customSetup(context);
+    }
+  }
+
+  private async quickSetup(context: ProjectContext): Promise<BuildResult> {
+    const detectedPresetKey = detectBestPreset(context);
+
+    if (detectedPresetKey) {
+      const preset = FRAMEWORK_PRESETS[detectedPresetKey];
+      if (!preset) {
+        prompts.log.warning("Could not find the detected preset");
+        return await this.selectPresetManually(context);
+      }
+
+      prompts.log.info(
+        `\n🎯 Detected project type: ${chalk.cyan(preset.name)}`
+      );
+      prompts.log.message(chalk.gray(`  ${preset.description}`));
+
+      const showDetails = await prompts.confirm({
+        message: "Would you like to review the configuration details?",
+        initialValue: false,
+      });
+
+      if (!prompts.isCancel(showDetails) && showDetails) {
+        prompts.log.message("\n📋 Configuration to be applied:");
+        this.displayPresetDetails(preset);
+      }
+
+      const useDetected = await prompts.confirm({
+        message: `Apply ${preset.name} configuration?`,
+        initialValue: true,
+      });
+
+      if (prompts.isCancel(useDetected)) {
+        prompts.cancel("Setup canceled");
+        throw new Error("Cancelled");
+      }
+
+      if (!useDetected) {
+        prompts.log.info("Please select a different preset");
+        return await this.selectPresetManually(context);
+      }
+
+      this.selectedPreset = preset;
+      this.presetKey = detectedPresetKey;
+      this.config = JSON.parse(JSON.stringify(preset.config));
+
+      const customize = await prompts.confirm({
+        message: "Would you like to add customizations?",
+        initialValue: false,
+      });
+
+      if (!prompts.isCancel(customize) && customize) {
+        await this.quickCustomize(context);
+      }
+    } else {
+      prompts.log.warning("Could not automatically detect the project type");
+      return await this.selectPresetManually(context);
+    }
+
+    return this.finalizeConfiguration();
+  }
+
+  private async customSetup(context: ProjectContext): Promise<BuildResult> {
     this.selectedPreset = await this.selectFramework(context);
     this.config = JSON.parse(JSON.stringify(this.selectedPreset.config));
 
-    await this.configureTarget();
+    const steps = [
+      { name: "Target", fn: () => this.configureTarget() },
+      { name: "Module system", fn: () => this.configureModuleSystem() },
+      {
+        name: "Type-checking strictness",
+        fn: () => this.configureStrictness(),
+      },
+      { name: "Path aliases", fn: () => this.configurePathAliases(context) },
+      { name: "Type libraries", fn: () => this.configureLibraries() },
+      {
+        name: "Additional options",
+        fn: () => this.configureAdditionalOptions(context),
+      },
+      { name: "File patterns", fn: () => this.configureFilePatterns(context) },
+    ];
 
-    await this.configureModuleSystem();
+    prompts.log.info(chalk.cyan("\nSetup steps:"));
+    steps.forEach((step, i) => {
+      prompts.log.message(chalk.gray(`  ${i + 1}. ${step.name}`));
+    });
 
-    await this.configureStrictness();
+    for (const step of steps) {
+      const skip = await prompts.confirm({
+        message: `Skip "${step.name}"?`,
+        initialValue: false,
+      });
 
-    await this.configurePathAliases(context);
+      if (prompts.isCancel(skip)) {
+        prompts.cancel("Setup canceled");
+        throw new Error("Cancelled");
+      }
 
-    await this.configureLibraries();
+      if (!skip) {
+        await step.fn();
+      }
+    }
 
-    await this.configureAdditionalOptions(context);
+    return this.finalizeConfiguration();
+  }
 
-    await this.configureFilePatterns(context);
+  private async selectPresetManually(
+    context: ProjectContext
+  ): Promise<BuildResult> {
+    const allPresets = Object.entries(FRAMEWORK_PRESETS).map(
+      ([key, preset]) => ({
+        value: key,
+        label: preset.name,
+        hint: preset.description,
+      })
+    );
 
+    const selectedKey = await prompts.select({
+      message: "Select a preset",
+      options: allPresets,
+    });
+
+    if (prompts.isCancel(selectedKey)) {
+      prompts.cancel("Setup canceled");
+      throw new Error("Cancelled");
+    }
+
+    this.selectedPreset = FRAMEWORK_PRESETS[selectedKey];
+    this.presetKey = selectedKey;
+    this.config = JSON.parse(JSON.stringify(this.selectedPreset.config));
+
+    const customize = await prompts.confirm({
+      message: "Would you like to customize the configuration?",
+      initialValue: false,
+    });
+
+    if (!prompts.isCancel(customize) && customize) {
+      await this.quickCustomize(context);
+    }
+
+    return this.finalizeConfiguration();
+  }
+
+  private async quickCustomize(context: ProjectContext): Promise<void> {
+    const customOptions = await prompts.multiselect({
+      message: "Select items to customize",
+      options: [
+        { value: "paths", label: "Path aliases (@/*, etc.)" },
+        { value: "strict", label: "Type-checking strictness" },
+        { value: "target", label: "Compilation target (ES2022, ES2020, etc.)" },
+        {
+          value: "output",
+          label: "Output options (source maps, declarations, etc.)",
+        },
+      ],
+      required: false,
+    });
+
+    if (prompts.isCancel(customOptions)) return;
+
+    for (const option of customOptions) {
+      switch (option) {
+        case "paths":
+          await this.configurePathAliases(context);
+          break;
+        case "strict":
+          await this.configureStrictness();
+          break;
+        case "target":
+          await this.configureTarget();
+          break;
+        case "output":
+          await this.configureOutputOptions();
+          break;
+      }
+    }
+  }
+
+  private async configureOutputOptions(): Promise<void> {
+    const outputOptions = await prompts.multiselect({
+      message: "Choose output options",
+      options: [
+        { value: "sourceMap", label: "Generate source maps" },
+        { value: "declaration", label: "Emit declaration files (.d.ts)" },
+        { value: "declarationMap", label: "Emit declaration source maps" },
+        { value: "removeComments", label: "Remove comments" },
+      ],
+      initialValues: ["sourceMap"],
+    });
+
+    if (!prompts.isCancel(outputOptions)) {
+      outputOptions.forEach((opt) => {
+        this.config.compilerOptions[opt] = true;
+      });
+    }
+  }
+
+  private displayPresetDetails(preset: TSConfigPreset): void {
+    const { compilerOptions } = preset.config;
+
+    prompts.log.message(chalk.gray(`  • Target: ${compilerOptions.target}`));
+    prompts.log.message(chalk.gray(`  • Module: ${compilerOptions.module}`));
+    prompts.log.message(
+      chalk.gray(
+        `  • Strict mode: ${compilerOptions.strict ? "Enabled" : "Disabled"}`
+      )
+    );
+
+    if (compilerOptions.jsx) {
+      prompts.log.message(chalk.gray(`  • JSX: ${compilerOptions.jsx}`));
+    }
+
+    if (compilerOptions.paths) {
+      prompts.log.message(
+        chalk.gray(
+          `  • Path aliases: ${Object.keys(compilerOptions.paths).join(", ")}`
+        )
+      );
+    }
+
+    if (preset.additionalFiles) {
+      prompts.log.message(
+        chalk.gray(
+          `  • Additional files: ${Object.keys(preset.additionalFiles).join(
+            ", "
+          )}`
+        )
+      );
+    }
+  }
+
+  private async finalizeConfiguration(): Promise<BuildResult> {
     const preview = this.generatePreview();
     prompts.log.message("");
-    prompts.log.info("📄 Generated Configuration Preview:");
+    prompts.log.info("📄 Final configuration preview:");
     prompts.log.message(chalk.gray(preview));
 
     const confirmed = await prompts.confirm({
@@ -56,18 +298,18 @@ export class TypeScriptConfigBuilder {
     });
 
     if (!confirmed || prompts.isCancel(confirmed)) {
-      prompts.cancel("Configuration cancelled");
+      prompts.cancel("Setup canceled");
       throw new Error("Configuration cancelled");
     }
 
     if (this.selectedPreset.additionalFiles) {
-      prompts.log.info(chalk.yellow("\n📝 Additional files will be created:"));
+      prompts.log.info(chalk.yellow("\n📝 Additional files to be created:"));
       Object.keys(this.selectedPreset.additionalFiles).forEach((file) => {
         prompts.log.message(chalk.gray(`  • ${file}`));
       });
     }
 
-    prompts.outro(chalk.green("✅ TypeScript configuration complete!"));
+    prompts.outro(chalk.green("✅ TypeScript configuration completed!"));
 
     return {
       config: JSON.stringify(this.config, null, 2),
@@ -129,10 +371,10 @@ export class TypeScriptConfigBuilder {
 
     if (detectedPresetKey) {
       const detected = FRAMEWORK_PRESETS[detectedPresetKey];
-      prompts.log.info(`Detected project type: ${chalk.cyan(detected.name)}`);
+      prompts.log.info(`Detected project type: ${chalk.cyan(detected?.name)}`);
 
       const useDetected = await prompts.confirm({
-        message: `Use ${detected.name} optimized settings?`,
+        message: `Use ${detected?.name} optimized settings?"`,
         initialValue: true,
       });
 
@@ -255,7 +497,7 @@ export class TypeScriptConfigBuilder {
 
   private async configureTarget(): Promise<void> {
     const customizeTarget = await prompts.confirm({
-      message: "Customize compilation target?",
+      message: "Customize the compilation target?",
       initialValue: false,
     });
 
@@ -263,15 +505,26 @@ export class TypeScriptConfigBuilder {
       return;
     }
 
-    prompts.log.step(chalk.cyan("Compilation Target"));
+    prompts.log.step(chalk.cyan("🎯 Set compilation target"));
+
+    prompts.log.info("Target versions & typical environments:");
+    prompts.log.message(
+      chalk.gray("  • ES2022: Node 16+, modern browsers (recommended)")
+    );
+    prompts.log.message(
+      chalk.gray("  • ES2020: Node 14+, browsers since ~2020")
+    );
+    prompts.log.message(chalk.gray("  • ES2017: Broad compatibility"));
+    prompts.log.message(chalk.gray("  • ES2015: Maximum compatibility"));
 
     const target = await prompts.select({
-      message: "Select ECMAScript target version",
+      message: "Choose ECMAScript target version",
       options: COMPILER_OPTIONS.targets,
     });
 
     if (!prompts.isCancel(target)) {
       this.config.compilerOptions.target = target;
+      prompts.log.success(`Compilation target set to ${target}`);
     }
   }
 
@@ -307,38 +560,66 @@ export class TypeScriptConfigBuilder {
   }
 
   private async configureStrictness(): Promise<void> {
-    prompts.log.step(chalk.cyan("Type Checking Strictness"));
+    prompts.log.step(chalk.cyan("🔒 Set type-checking strictness"));
+
+    prompts.log.info("Differences by strictness level:");
+    prompts.log.message(
+      chalk.gray("  • Strict: enable all strict checks (recommended)")
+    );
+    prompts.log.message(
+      chalk.gray("  • Moderate: balanced defaults for migrations")
+    );
+    prompts.log.message(chalk.gray("  • Loose: minimal type checks"));
+    prompts.log.message(chalk.gray("  • Custom: pick individual options"));
 
     const strictness = await prompts.select({
-      message: "Select type checking strictness level",
-      options: COMPILER_OPTIONS.strictness,
+      message: "Choose strictness level",
+      options: COMPILER_OPTIONS.strictness, // keep original (English) labels
     });
 
     if (prompts.isCancel(strictness)) {
-      prompts.cancel("Setup cancelled");
+      prompts.cancel("Setup canceled");
       throw new Error("Cancelled");
     }
 
     if (strictness === "custom") {
       await this.configureCustomStrictness();
     } else {
-      const strictOptions = getCustomStrictnessOptions();
-      this.config.compilerOptions = {
-        ...this.config.compilerOptions,
-        ...strictOptions,
+      const strictnessSettings = {
+        strict: { strict: true },
+        moderate: {
+          strict: false,
+          noImplicitAny: true,
+          strictNullChecks: true,
+          strictFunctionTypes: true,
+        },
+        loose: {
+          strict: false,
+          noImplicitAny: false,
+        },
       };
+
+      const settings =
+        strictnessSettings[strictness as keyof typeof strictnessSettings];
+      if (settings) {
+        this.config.compilerOptions = {
+          ...this.config.compilerOptions,
+          ...settings,
+        };
+      }
     }
 
-    if (
-      this.config.compilerOptions.typeChecking ||
-      this.config.compilerOptions.codeQuality
-    ) {
-      console.warn("Warning: Invalid keys detected in compilerOptions");
-      delete this.config.compilerOptions.typeChecking;
-      delete this.config.compilerOptions.codeQuality;
-    }
-
-    prompts.log.success(`${strictness} mode configured`);
+    prompts.log.success(
+      `${
+        strictness === "strict"
+          ? "Strict"
+          : strictness === "moderate"
+          ? "Moderate"
+          : strictness === "loose"
+          ? "Loose"
+          : "Custom"
+      } mode selected`
+    );
   }
 
   private async configureCustomStrictness(): Promise<void> {
@@ -379,7 +660,7 @@ export class TypeScriptConfigBuilder {
 
   private async configurePathAliases(context: ProjectContext): Promise<void> {
     const hasAliases = await prompts.confirm({
-      message: "Configure path aliases? (e.g., @/components)",
+      message: "Would you like to set up path aliases? (e.g., @/components)",
       initialValue: true,
     });
 
@@ -387,24 +668,30 @@ export class TypeScriptConfigBuilder {
       return;
     }
 
-    prompts.log.step(chalk.cyan("Path Aliases Configuration"));
+    prompts.log.step(chalk.cyan("📁 Configure path aliases"));
 
     const hasSrc = await fileExists(path.join(context.projectPath, "src"));
 
+    prompts.log.info("Path aliases help shorten import paths:");
+    prompts.log.message(
+      chalk.gray("  • import Button from '@/components/Button'")
+    );
+    prompts.log.message(chalk.gray("  • import { api } from '@/lib/api'"));
+
     const baseUrl = await prompts.select({
-      message: "Select base directory for path resolution",
+      message: "Choose base directory",
       options: [
         {
           value: ".",
           label: "Project root (.)",
-          hint: "Resolve from project root",
+          hint: "Resolve paths from the project root",
         },
         ...(hasSrc
           ? [
               {
                 value: "./src",
                 label: "Source directory (./src)",
-                hint: "Resolve from src folder",
+                hint: "Resolve paths from the src folder",
               },
             ]
           : []),
@@ -424,9 +711,9 @@ export class TypeScriptConfigBuilder {
         {
           value: "structured",
           label: "Structured",
-          hint: "Multiple specific aliases",
+          hint: "Alias per top-level folder",
         },
-        { value: "custom", label: "Custom", hint: "Define your own" },
+        { value: "custom", label: "Custom", hint: "Define your own aliases" },
         { value: "none", label: "Skip", hint: "No aliases" },
       ],
     });
@@ -439,6 +726,7 @@ export class TypeScriptConfigBuilder {
 
     if (aliasPresets === "simple") {
       paths["@/*"] = [baseUrl === "." ? "./src/*" : "./*"];
+      prompts.log.success("@/* alias configured");
     } else if (aliasPresets === "structured") {
       const defaultAliases = await prompts.multiselect({
         message: "Select path aliases to configure",
@@ -468,12 +756,13 @@ export class TypeScriptConfigBuilder {
             ];
           }
         }
+        prompts.log.success(`Configured ${defaultAliases.length} alias(es)`);
       }
     }
 
     if (aliasPresets === "custom" || aliasPresets === "structured") {
       const addCustom = await prompts.confirm({
-        message: "Add custom path aliases?",
+        message: "Add custom aliases?",
         initialValue: aliasPresets === "custom",
       });
 
@@ -485,7 +774,7 @@ export class TypeScriptConfigBuilder {
             placeholder: "@custom/*",
             validate: (value) => {
               if (!value.includes("*")) {
-                return "Alias must include * for wildcard matching";
+                return "Alias pattern must include * for wildcard matching";
               }
               return undefined;
             },
@@ -522,6 +811,9 @@ export class TypeScriptConfigBuilder {
 
     if (Object.keys(paths).length > 0) {
       this.config.compilerOptions.paths = paths;
+      prompts.log.info(
+        `Configured ${Object.keys(paths).length} path alias(es) in total`
+      );
     }
   }
 
@@ -687,7 +979,7 @@ export class TypeScriptConfigBuilder {
     }
   }
 
-  private async configureFilePatterns(context: ProjectContext): Promise<void> {
+  private async configureFilePatterns(_context: ProjectContext): Promise<void> {
     const customizePatterns = await prompts.confirm({
       message: "Customize file include/exclude patterns?",
       initialValue: false,
