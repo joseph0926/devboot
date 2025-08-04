@@ -213,7 +213,7 @@ export class EditorConfigBuilder {
 
     if (this.sections.length > 0) {
       prompts.log.success(
-        `\nFile type rules configured for ${this.sections.length} patterns`
+        `\nFile type rules configured for ${this.sections.length} patterns`,
       );
     }
   }
@@ -239,7 +239,7 @@ export class EditorConfigBuilder {
           const indentSize = await prompts.select({
             message: `Indentation size for ${typeConfig.description}`,
             options: RULE_OPTIONS.indent_size.filter(
-              (opt) => opt.value !== "custom"
+              (opt) => opt.value !== "custom",
             ),
           });
 
@@ -300,7 +300,7 @@ export class EditorConfigBuilder {
       if (!prompts.isCancel(specialRules)) {
         for (const ruleKey of specialRules) {
           const rule = typeConfig.optionalRules.find(
-            (r: EditorConfigRule) => r.key === ruleKey
+            (r: EditorConfigRule) => r.key === ruleKey,
           );
           if (rule) {
             rules.push(rule);

@@ -9,7 +9,7 @@ import {
 } from "../errors/logic/project.error";
 
 export async function readPackageJson(
-  projectPath: string
+  projectPath: string,
 ): Promise<PackageJson> {
   const packageJsonPath = path.join(projectPath, "package.json");
 
@@ -21,7 +21,7 @@ export async function readPackageJson(
         searchedPath: packageJsonPath,
         hasPackageJson: false,
         suggestion: "npm init",
-      }
+      },
     );
   }
 
@@ -43,7 +43,7 @@ export async function readPackageJson(
           hasPackageJson: true,
           parseError: error.message,
         },
-        error
+        error,
       );
     }
 
@@ -58,7 +58,7 @@ export async function readPackageJson(
           errorCode: fsError.code,
           syscall: fsError.syscall,
         },
-        "Check file permissions and try again."
+        "Check file permissions and try again.",
       );
     }
 
@@ -71,14 +71,14 @@ export async function readPackageJson(
       {
         packageJsonPath,
       },
-      "Check file permissions and try again."
+      "Check file permissions and try again.",
     );
   }
 }
 
 export async function writePackageJson(
   projectPath: string,
-  content: any
+  content: any,
 ): Promise<void> {
   const packageJsonPath = path.join(projectPath, "package.json");
 
@@ -97,7 +97,7 @@ export async function writePackageJson(
             packageJsonPath,
             errorCode: fsError.code,
           },
-          "Try running with elevated permissions (sudo)"
+          "Try running with elevated permissions (sudo)",
         );
       }
 
@@ -106,7 +106,7 @@ export async function writePackageJson(
           LogicErrorCodes.DISK_FULL,
           "Not enough disk space to write package.json",
           false,
-          { packageJsonPath }
+          { packageJsonPath },
         );
       }
     }
@@ -117,7 +117,7 @@ export async function writePackageJson(
         ? `Failed to write package.json: ${error.message}`
         : "Failed to write package.json",
       false,
-      { packageJsonPath }
+      { packageJsonPath },
     );
   }
 }
@@ -143,7 +143,7 @@ export async function readFile(filePath: string): Promise<string> {
           LogicErrorCodes.FILE_NOT_FOUND,
           `File not found: ${filePath}`,
           false,
-          { filePath }
+          { filePath },
         );
       }
 
@@ -156,7 +156,7 @@ export async function readFile(filePath: string): Promise<string> {
             filePath,
             errorCode: fsError.code,
           },
-          "Check file permissions"
+          "Check file permissions",
         );
       }
     }
@@ -167,14 +167,14 @@ export async function readFile(filePath: string): Promise<string> {
         ? `Failed to read file: ${error.message}`
         : "Failed to read file",
       false,
-      { filePath }
+      { filePath },
     );
   }
 }
 
 export async function writeFile(
   filePath: string,
-  content: string
+  content: string,
 ): Promise<void> {
   try {
     await fs.ensureFile(filePath);
@@ -192,7 +192,7 @@ export async function writeFile(
             filePath,
             errorCode: fsError.code,
           },
-          "Try running with elevated permissions (sudo)"
+          "Try running with elevated permissions (sudo)",
         );
       }
 
@@ -201,7 +201,7 @@ export async function writeFile(
           LogicErrorCodes.DISK_FULL,
           "Not enough disk space",
           false,
-          { filePath }
+          { filePath },
         );
       }
     }
@@ -212,7 +212,7 @@ export async function writeFile(
         ? `Failed to write file: ${error.message}`
         : "Failed to write file",
       false,
-      { filePath }
+      { filePath },
     );
   }
 }

@@ -11,7 +11,7 @@ export class InitCommand {
       .option("-v, --verbose", "Show detailed output")
       .option(
         "--dry-run",
-        "Show what would be installed without making changes"
+        "Show what would be installed without making changes",
       )
       .option("-f, --force", "Overwrite existing configurations")
       .action(async (options) => {

@@ -33,7 +33,7 @@ function editDistanceSimple(str1: string, str2: string): number {
 export function findSimilar(
   target: string,
   candidates: string[],
-  maxResults: number = 3
+  maxResults: number = 3,
 ): string[] {
   if (candidates.length === 0) return [];
 
@@ -62,7 +62,7 @@ export function findSimilar(
     } else {
       const similarity = stringSimilarity(
         normalizedTarget,
-        normalizedCandidate
+        normalizedCandidate,
       );
       if (similarity > 0.6) {
         score = similarity * 60;

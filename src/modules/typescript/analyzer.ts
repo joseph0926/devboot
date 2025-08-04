@@ -59,13 +59,13 @@ export class TSConfigAnalyzer {
 
     if (!compilerOptions.strict && !compilerOptions.strictNullChecks) {
       analysis.suggestions.push(
-        "Consider enabling strict mode for better type safety"
+        "Consider enabling strict mode for better type safety",
       );
     }
 
     if (compilerOptions.target === "ES5" || compilerOptions.target === "ES6") {
       analysis.suggestions.push(
-        "Consider upgrading target to ES2022 for modern JavaScript features"
+        "Consider upgrading target to ES2022 for modern JavaScript features",
       );
     }
   }
@@ -73,7 +73,7 @@ export class TSConfigAnalyzer {
   private analyzeIncludes(analysis: TSConfigAnalysis): void {
     if (!analysis.config.include && !analysis.config.files) {
       analysis.warnings.push(
-        "No 'include' or 'files' specified. All TypeScript files will be included."
+        "No 'include' or 'files' specified. All TypeScript files will be included.",
       );
     }
   }

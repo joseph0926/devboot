@@ -74,7 +74,7 @@ export class ConfigDetector {
   ];
 
   static async detectInstalledConfigs(
-    projectPath: string
+    projectPath: string,
   ): Promise<DetectedConfig[]> {
     try {
       await this.validateProjectPath(projectPath);
@@ -82,9 +82,8 @@ export class ConfigDetector {
       const detectedConfigs = new Map<string, DetectedConfig>();
 
       try {
-        const registryConfigs = await this.detectFromModuleRegistry(
-          projectPath
-        );
+        const registryConfigs =
+          await this.detectFromModuleRegistry(projectPath);
         registryConfigs.forEach((config) => {
           detectedConfigs.set(config.name, config);
         });
@@ -116,14 +115,14 @@ export class ConfigDetector {
         {
           filePath: projectPath,
           originalError: error instanceof Error ? error.message : String(error),
-        }
+        },
       );
     }
   }
 
   static async isConfigInstalled(
     projectPath: string,
-    configName: string
+    configName: string,
   ): Promise<boolean> {
     try {
       const module = ModuleRegistry.get(configName);
@@ -136,7 +135,7 @@ export class ConfigDetector {
         const availableConfigs = this.CONFIG_PATTERNS.map((p) => p.name);
         throw new ConfigNotFoundError(
           `Configuration pattern for '${configName}' not found`,
-          { configName, availableConfigs }
+          { configName, availableConfigs },
         );
       }
 
@@ -153,14 +152,14 @@ export class ConfigDetector {
           error instanceof Error ? error.message : "Unknown error"
         }`,
         true,
-        { configName, filePath: projectPath }
+        { configName, filePath: projectPath },
       );
     }
   }
 
   static async findConfigFile(
     projectPath: string,
-    configName: string
+    configName: string,
   ): Promise<string | null> {
     try {
       const pattern = this.CONFIG_PATTERNS.find((p) => p.name === configName);
@@ -183,7 +182,7 @@ export class ConfigDetector {
           configName,
           filePath: projectPath,
           originalError: error instanceof Error ? error.message : String(error),
-        }
+        },
       );
     }
   }
@@ -200,7 +199,7 @@ export class ConfigDetector {
       if (!(await fileExists(packageJsonPath))) {
         throw new ProjectNotValidError(
           "No package.json found in project directory",
-          { filePath: packageJsonPath }
+          { filePath: packageJsonPath },
         );
       }
     } catch (error) {
@@ -212,13 +211,13 @@ export class ConfigDetector {
         `Failed to validate project path: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
-        { filePath: projectPath }
+        { filePath: projectPath },
       );
     }
   }
 
   private static async detectFromModuleRegistry(
-    projectPath: string
+    projectPath: string,
   ): Promise<DetectedConfig[]> {
     const modules = ModuleRegistry.getAll();
     const detected: DetectedConfig[] = [];
@@ -241,7 +240,7 @@ export class ConfigDetector {
   }
 
   private static async detectFromPatterns(
-    projectPath: string
+    projectPath: string,
   ): Promise<DetectedConfig[]> {
     const detected: DetectedConfig[] = [];
 
@@ -264,7 +263,7 @@ export class ConfigDetector {
 
   private static async checkPattern(
     projectPath: string,
-    pattern: ConfigPattern
+    pattern: ConfigPattern,
   ): Promise<{ found: boolean; detectedFiles: string[] }> {
     const detectedFiles: string[] = [];
 
@@ -307,7 +306,7 @@ export class ConfigDetector {
       linting: names.filter((c) => ["eslint", "prettier"].includes(c)),
       testing: names.filter((c) => ["vitest", "jest", "cypress"].includes(c)),
       building: names.filter((c) =>
-        ["typescript", "vite", "webpack"].includes(c)
+        ["typescript", "vite", "webpack"].includes(c),
       ),
       git: names.filter((c) => ["husky", "commitlint"].includes(c)),
       editor: names.filter((c) => ["editorconfig", "vscode"].includes(c)),
@@ -326,7 +325,7 @@ export class ConfigDetector {
             "commitlint",
             "editorconfig",
             "vscode",
-          ].includes(c)
+          ].includes(c),
       ),
     };
   }

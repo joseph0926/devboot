@@ -16,7 +16,7 @@ export class SimpleLogicError extends LogicError {
     message: string,
     public readonly isRecoverable: boolean = true,
     context?: Record<string, any>,
-    private readonly _solution?: string
+    private readonly _solution?: string,
   ) {
     super(message, context);
   }

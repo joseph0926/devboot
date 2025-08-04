@@ -50,7 +50,7 @@ export class EditorConfigModule extends BaseModule {
       if (isInstalled && !options.force) {
         result.valid = false;
         result.errors.push(
-          ".editorconfig already exists. Use --force to overwrite."
+          ".editorconfig already exists. Use --force to overwrite.",
         );
         return result;
       }
@@ -77,7 +77,7 @@ export class EditorConfigModule extends BaseModule {
   }
 
   async getFilesToCreate(
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<Map<string, string>> {
     const files = new Map<string, string>();
 
@@ -97,7 +97,7 @@ export class EditorConfigModule extends BaseModule {
             throw new SimpleLogicError(
               LogicErrorCodes.USER_CANCELLED,
               "EditorConfig setup cancelled by user",
-              false
+              false,
             );
           }
           throw error;
@@ -126,7 +126,7 @@ export class EditorConfigModule extends BaseModule {
         {
           module: this.name,
           error: error instanceof Error ? error.message : String(error),
-        }
+        },
       );
     }
   }
@@ -170,7 +170,7 @@ export class EditorConfigModule extends BaseModule {
               path: configPath,
               errorCode: error.code,
             },
-            "Try running with elevated permissions (sudo)"
+            "Try running with elevated permissions (sudo)",
           );
         }
         throw error;
@@ -189,8 +189,8 @@ export class EditorConfigModule extends BaseModule {
             {
               module: this.name,
               originalError: errorMessage,
-            }
-          )
+            },
+          ),
         );
       }
     }
@@ -240,7 +240,7 @@ export class EditorConfigModule extends BaseModule {
         const content = lines.join("\n");
         return content.replace(
           /indent_size = \d+/g,
-          `indent_size = ${prettierConfig.tabWidth}`
+          `indent_size = ${prettierConfig.tabWidth}`,
         );
       }
 

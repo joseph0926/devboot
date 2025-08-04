@@ -12,7 +12,7 @@ export class AddCommand {
       .option("-v, --verbose", "Show detailed output")
       .option(
         "--dry-run",
-        "Show what would be installed without making changes"
+        "Show what would be installed without making changes",
       )
       .action(async (modules: string[], options) => {
         try {

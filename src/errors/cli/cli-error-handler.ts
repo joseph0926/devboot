@@ -4,12 +4,8 @@ import { LogicError } from "../../errors/logic.error";
 import { CLIError } from "../../errors/cli.error";
 import {
   isNodeError,
-  isFSError,
-  isNetworkError,
   mapNodeErrorToLogicError,
   NodeError,
-  FSError,
-  NetworkError,
 } from "../../types/error.type";
 import { ExitCodes, getExitCodeFromError } from "../../types/exit-codes";
 import { ErrorLogger } from "../../utils/error-logger";
@@ -23,7 +19,7 @@ export interface ErrorHandlerOptions {
 export class CLIErrorHandler {
   static handle(
     error: unknown,
-    options: ErrorHandlerOptions = {}
+    options: ErrorHandlerOptions = {},
   ): never | void {
     const { verbose = false, showHelp = false, exitOnError = true } = options;
 
@@ -50,7 +46,7 @@ export class CLIErrorHandler {
 
   private static handleCLIError(
     error: CLIError,
-    options: { verbose: boolean; showHelp: boolean }
+    options: { verbose: boolean; showHelp: boolean },
   ): ExitCodes {
     ErrorLogger.logError(error, {
       verbose: options.verbose,
@@ -71,7 +67,7 @@ export class CLIErrorHandler {
    */
   private static handleLogicError(
     error: LogicError,
-    options: { verbose: boolean }
+    options: { verbose: boolean },
   ): ExitCodes {
     ErrorLogger.logError(error, {
       verbose: options.verbose,
@@ -87,7 +83,7 @@ export class CLIErrorHandler {
    */
   private static handleBaseError(
     error: BaseError,
-    options: { verbose: boolean }
+    options: { verbose: boolean },
   ): ExitCodes {
     ErrorLogger.logError(error, {
       verbose: options.verbose,
@@ -102,20 +98,22 @@ export class CLIErrorHandler {
    */
   private static handleNodeError(
     error: NodeError,
-    options: { verbose: boolean }
+    options: { verbose: boolean },
   ): ExitCodes {
     const friendlyMessage = this.getNodeErrorMessage(error);
     console.error(`${chalk.red("✗")} ${friendlyMessage}`);
 
-    if (isFSError(error)) {
-      console.log(chalk.yellow(`\n💡 파일 경로: ${error.path}`));
+    if (error.code === "ENOENT" || error.code === "EACCES" || error.code === "EPERM") {
+      if ("path" in error) {
+        console.log(chalk.yellow(`\n💡 파일 경로: ${error.path}`));
+      }
 
       if (error.code === "EACCES" || error.code === "EPERM") {
         console.log(chalk.yellow("💡 관리자 권한이 필요할 수 있습니다 (sudo)"));
       }
     }
 
-    if (isNetworkError(error)) {
+    if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
       console.log(chalk.yellow("\n💡 인터넷 연결을 확인해주세요"));
     }
 
@@ -137,7 +135,7 @@ export class CLIErrorHandler {
    */
   private static handleGenericError(
     error: Error,
-    options: { verbose: boolean }
+    options: { verbose: boolean },
   ): ExitCodes {
     ErrorLogger.logError(error, { verbose: options.verbose });
     return ExitCodes.GENERAL_ERROR;
@@ -148,7 +146,7 @@ export class CLIErrorHandler {
    */
   private static handleUnknownError(
     error: unknown,
-    options: { verbose: boolean }
+    options: { verbose: boolean },
   ): ExitCodes {
     console.error(`${chalk.red("✗")} 예상치 못한 오류가 발생했습니다`);
 
@@ -187,7 +185,7 @@ export class CLIErrorHandler {
    */
   static handleMultiple(
     errors: BaseError[],
-    options: ErrorHandlerOptions = {}
+    options: ErrorHandlerOptions = {},
   ): never | void {
     if (errors.length === 0) return;
 

@@ -22,7 +22,7 @@ export class ModuleInstaller {
   }
 
   async prepareContext(
-    projectPath: string = process.cwd()
+    projectPath: string = process.cwd(),
   ): Promise<ProjectContext> {
     const projectInfo = await this.projectAnalyzer.analyze(projectPath);
 
@@ -38,7 +38,7 @@ export class ModuleInstaller {
   async installModule(
     moduleName: string,
     projectPath: string = process.cwd(),
-    options: InstallOptionsOnly = {}
+    options: InstallOptionsOnly = {},
   ): Promise<InstallResult> {
     const module = ModuleRegistry.get(moduleName);
 
@@ -58,7 +58,7 @@ export class ModuleInstaller {
         },
         similarModules.length > 0
           ? `Module '${moduleName}' not found. Did you mean '${similarModules[0]}'?`
-          : `Available modules: ${availableModules.join(", ")}`
+          : `Available modules: ${availableModules.join(", ")}`,
       );
     }
 
@@ -105,8 +105,8 @@ export class ModuleInstaller {
                 {
                   moduleName,
                   originalError: errorMessage,
-                }
-              )
+                },
+              ),
             );
           }
         }
@@ -128,7 +128,7 @@ export class ModuleInstaller {
           moduleName,
           projectPath,
           originalError: errorMessage,
-        }
+        },
       );
     }
   }

@@ -16,7 +16,7 @@ export class ErrorLogger {
       prefix?: boolean;
       showSolution?: boolean;
       showContext?: boolean;
-    } = {}
+    } = {},
   ): void {
     const {
       verbose = false,
@@ -41,7 +41,7 @@ export class ErrorLogger {
       prefix: boolean;
       showSolution: boolean;
       showContext: boolean;
-    }
+    },
   ): void {
     const prefix = options.prefix ? `${this.ERROR_PREFIX.error} ` : "";
 
@@ -68,7 +68,7 @@ export class ErrorLogger {
 
   private static logGenericError(
     error: Error,
-    options: { verbose: boolean; prefix: boolean }
+    options: { verbose: boolean; prefix: boolean },
   ): void {
     const prefix = options.prefix ? `${this.ERROR_PREFIX.error} ` : "";
     console.error(`${prefix}${error.message}`);
@@ -81,7 +81,7 @@ export class ErrorLogger {
 
   private static logUnknownError(
     error: unknown,
-    options: { prefix: boolean }
+    options: { prefix: boolean },
   ): void {
     const prefix = options.prefix ? `${this.ERROR_PREFIX.error} ` : "";
     console.error(`${prefix}An unexpected error occurred`);
@@ -115,10 +115,10 @@ export class ErrorLogger {
 
   static logErrorWithProgress(
     error: BaseError,
-    progress: { current: number; total: number; item: string }
+    progress: { current: number; total: number; item: string },
   ): void {
     const progressInfo = chalk.gray(
-      `[${progress.current}/${progress.total}] ${progress.item}`
+      `[${progress.current}/${progress.total}] ${progress.item}`,
     );
 
     console.error(`${this.ERROR_PREFIX.error} ${progressInfo}`);

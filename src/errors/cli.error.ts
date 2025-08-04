@@ -16,7 +16,7 @@ export class SimpleCLIError extends CLIError {
     public readonly isRecoverable: boolean = true,
     public readonly exitCode: number,
     public readonly showHelp: boolean = true,
-    context?: Record<string, any>
+    context?: Record<string, any>,
   ) {
     super(message, context);
   }

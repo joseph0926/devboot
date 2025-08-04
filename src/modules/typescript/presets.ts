@@ -169,7 +169,7 @@ export const FRAMEWORK_PRESETS: Record<string, TSConfigPreset> = {
           include: ["vite.config.ts"],
         },
         null,
-        2
+        2,
       ),
     },
   },

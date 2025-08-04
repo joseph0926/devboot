@@ -150,7 +150,7 @@ export function isExecError(error: unknown): error is ExecError {
 }
 
 export function mapNodeErrorToLogicError(
-  nodeError: NodeError
+  nodeError: NodeError,
 ): LogicErrorCode | null {
   const mapping: Record<string, LogicErrorCode> = {
     ENOENT: LogicErrorCodes.FILE_NOT_FOUND,

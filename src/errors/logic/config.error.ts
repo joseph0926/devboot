@@ -55,7 +55,7 @@ export class ConfigNotFoundError extends LogicError<ConfigErrorContext> {
 
     if (configName && availableConfigs?.length) {
       return `Configuration '${configName}' not found. Available: ${availableConfigs.join(
-        ", "
+        ", ",
       )}`;
     }
 
@@ -81,7 +81,7 @@ export class ConfigConflictError extends LogicError<ConfigErrorContext> {
     }
 
     return `${configName} conflicts with: ${conflicts.join(
-      ", "
+      ", ",
     )}. Keep only one`;
   }
 }

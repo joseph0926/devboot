@@ -76,11 +76,11 @@ export abstract class BaseModule {
   }>;
 
   abstract getFilesToCreate(
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<Map<string, string>>;
 
   abstract getFilesToModify(
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<Map<string, FileModifier>>;
 
   async install(options: InstallOptions): Promise<InstallResult> {
@@ -111,8 +111,8 @@ export abstract class BaseModule {
               },
               validation.conflictingModules?.length
                 ? "Use --force to override existing configurations"
-                : undefined
-            )
+                : undefined,
+            ),
         );
 
         if (validation.conflictingModules?.length) {
@@ -139,7 +139,7 @@ export abstract class BaseModule {
           path.join(options.projectPath, filePath),
           content,
           result,
-          options
+          options,
         );
       }
 
@@ -149,7 +149,7 @@ export abstract class BaseModule {
           path.join(options.projectPath, filePath),
           modifier,
           result,
-          options
+          options,
         );
       }
 
@@ -184,7 +184,7 @@ export abstract class BaseModule {
                 rollbackError instanceof Error
                   ? rollbackError.message
                   : String(rollbackError),
-            }
+            },
           );
           result.errors?.push(rollbackErrorObj);
         }
@@ -203,8 +203,8 @@ export abstract class BaseModule {
             {
               module: this.name,
               originalError: errorMessage,
-            }
-          )
+            },
+          ),
         );
       }
 
@@ -252,7 +252,7 @@ export abstract class BaseModule {
     filePath: string,
     content: string,
     result: InstallResult,
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<void> {
     try {
       const dir = path.dirname(filePath);
@@ -269,7 +269,7 @@ export abstract class BaseModule {
                 path: dir,
                 operation: "mkdir",
                 errorCode: fsError.code,
-              }
+              },
             );
           }
         }
@@ -288,7 +288,7 @@ export abstract class BaseModule {
                 path: filePath,
                 operation: "write",
                 errorCode: fsError.code,
-              }
+              },
             );
           }
           if (fsError.code === "ENOSPC") {
@@ -296,7 +296,7 @@ export abstract class BaseModule {
               LogicErrorCodes.DISK_FULL,
               "Not enough disk space",
               false,
-              { path: filePath }
+              { path: filePath },
             );
           }
         }
@@ -307,7 +307,7 @@ export abstract class BaseModule {
 
       if (options.verbose) {
         ErrorLogger.logInfo(
-          `Created: ${path.relative(options.projectPath, filePath)}`
+          `Created: ${path.relative(options.projectPath, filePath)}`,
         );
       }
 
@@ -330,7 +330,7 @@ export abstract class BaseModule {
           operation: "create",
           originalError: error instanceof Error ? error.message : String(error),
         },
-        error
+        error,
       );
     }
   }
@@ -339,7 +339,7 @@ export abstract class BaseModule {
     filePath: string,
     modifier: FileModifier,
     result: InstallResult,
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<void> {
     let originalContent: string;
 
@@ -362,7 +362,7 @@ export abstract class BaseModule {
                 path: filePath,
                 operation: "read",
                 errorCode: fsError.code,
-              }
+              },
             );
           }
         }
@@ -381,7 +381,7 @@ export abstract class BaseModule {
             path: filePath,
             modifierError:
               error instanceof Error ? error.message : String(error),
-          }
+          },
         );
       }
 
@@ -397,7 +397,7 @@ export abstract class BaseModule {
                 path: filePath,
                 operation: "write",
                 errorCode: fsError.code,
-              }
+              },
             );
           }
         }
@@ -408,7 +408,7 @@ export abstract class BaseModule {
 
       if (options.verbose) {
         ErrorLogger.logInfo(
-          `Modified: ${path.relative(options.projectPath, filePath)}`
+          `Modified: ${path.relative(options.projectPath, filePath)}`,
         );
       }
 
@@ -427,7 +427,7 @@ export abstract class BaseModule {
           operation: "modify",
           originalError: error instanceof Error ? error.message : String(error),
         },
-        error
+        error,
       );
     }
   }

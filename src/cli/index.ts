@@ -45,25 +45,25 @@ program.addHelpText(
   `
 ${chalk.bold("Examples:")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot init"
+    "devboot init",
   )}                    ${chalk.gray("# Interactive setup")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot init -y"
+    "devboot init -y",
   )}                 ${chalk.gray("# Use defaults")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot add eslint-prettier"
+    "devboot add eslint-prettier",
   )}     ${chalk.gray("# Add specific module")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot list"
+    "devboot list",
   )}                    ${chalk.gray("# Show all modules")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot doctor"
+    "devboot doctor",
   )}                  ${chalk.gray("# Check your setup")}
 
 ${chalk.bold("Need help?")}
   ${chalk.gray("Visit:")} https://github.com/joseph0926/devboot
   ${chalk.gray("Report issues:")} https://github.com/joseph0926/devboot/issues
-`
+`,
 );
 
 try {

@@ -11,7 +11,7 @@ export interface ModuleSelectionOptions {
 
 export class ModuleSelectionStep {
   static async selectModules(
-    options: ModuleSelectionOptions
+    options: ModuleSelectionOptions,
   ): Promise<string[]> {
     if (!options.isInteractive) {
       return this.getDefaultModules();
@@ -39,7 +39,7 @@ export class ModuleSelectionStep {
   }
 
   private static getRecommendedModules(
-    options: ModuleSelectionOptions
+    options: ModuleSelectionOptions,
   ): string[] {
     const recommended = [];
 
@@ -63,7 +63,7 @@ export class ModuleSelectionStep {
     return availableModules.map((module) => {
       const isInstalled = options.existingConfigs.includes(module.name);
       const isRecommended = this.getRecommendedModules(options).includes(
-        module.name
+        module.name,
       );
 
       return {
@@ -73,7 +73,7 @@ export class ModuleSelectionStep {
           module.name,
           isInstalled,
           isRecommended,
-          options
+          options,
         ),
       };
     });
@@ -83,7 +83,7 @@ export class ModuleSelectionStep {
     moduleName: string,
     isInstalled: boolean,
     isRecommended: boolean,
-    options: ModuleSelectionOptions
+    options: ModuleSelectionOptions,
   ): string {
     if (isInstalled) {
       return chalk.yellow("⚠ already configured");

@@ -59,7 +59,7 @@ export class DoctorCommand {
 
   private static async checkPackageJson(
     projectPath: string,
-    checks: HealthCheck[]
+    checks: HealthCheck[],
   ): Promise<void> {
     try {
       const pkg = await readPackageJson(projectPath);
@@ -111,7 +111,7 @@ export class DoctorCommand {
 
   private static async checkGitRepository(
     projectPath: string,
-    checks: HealthCheck[]
+    checks: HealthCheck[],
   ): Promise<void> {
     const gitExists = await fileExists(path.join(projectPath, ".git"));
 
@@ -146,7 +146,7 @@ export class DoctorCommand {
   }
 
   private static async checkPackageManager(
-    checks: HealthCheck[]
+    checks: HealthCheck[],
   ): Promise<void> {
     const managers = [
       { name: "pnpm", cmd: "pnpm --version" },
@@ -181,7 +181,7 @@ export class DoctorCommand {
 
   private static async checkInstalledModules(
     projectPath: string,
-    checks: HealthCheck[]
+    checks: HealthCheck[],
   ): Promise<void> {
     try {
       await readPackageJson(projectPath);
@@ -213,7 +213,7 @@ export class DoctorCommand {
 
   private static async checkCommonConfigs(
     projectPath: string,
-    checks: HealthCheck[]
+    checks: HealthCheck[],
   ): Promise<void> {
     const configs = [
       { file: "tsconfig.json", name: "TypeScript" },
@@ -251,8 +251,8 @@ export class DoctorCommand {
         status === "ok"
           ? chalk.green("✓")
           : status === "warn"
-          ? chalk.yellow("⚠")
-          : chalk.red("✗");
+            ? chalk.yellow("⚠")
+            : chalk.red("✗");
 
       log.message(`  ${icon} ${name.padEnd(20)} ${message}`);
     });
@@ -262,9 +262,9 @@ export class DoctorCommand {
     if (hasErrors) {
       ErrorLogger.logError(
         new Error(
-          "Some critical issues found. Please fix them before proceeding."
+          "Some critical issues found. Please fix them before proceeding.",
         ),
-        { verbose: false }
+        { verbose: false },
       );
     } else if (hasWarnings) {
       ErrorLogger.logWarning("Some warnings found, but you can proceed.");

@@ -1,9 +1,9 @@
 ---
 name: feature report
 about: Create a report to help us improve
-title: '[FEAT] '
-labels: 'feat'
-assignees: ''
+title: "[FEAT] "
+labels: "feat"
+assignees: ""
 ---
 
 ## Description

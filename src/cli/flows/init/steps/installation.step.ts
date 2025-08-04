@@ -15,7 +15,7 @@ export class InstallationStep {
   static async installModules(
     modules: string[],
     projectPath: string,
-    options: InstallOptionsOnly
+    options: InstallOptionsOnly,
   ): Promise<InstallationResult> {
     const installer = new ModuleInstaller();
     const result: InstallationResult = {
@@ -33,7 +33,7 @@ export class InstallationStep {
         const installResult = await installer.installModule(
           moduleName,
           projectPath,
-          options
+          options,
         );
 
         if (installResult.success) {

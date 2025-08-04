@@ -56,7 +56,7 @@ export class AddFlow {
             {
               currentPath: projectPath,
               suggestion: "Run this command in a directory with package.json",
-            }
+            },
           );
         }
         throw error;
@@ -67,7 +67,7 @@ export class AddFlow {
         false,
         1,
         false,
-        { originalError: error }
+        { originalError: error },
       );
     }
   }
@@ -75,7 +75,7 @@ export class AddFlow {
   private async validateModules(moduleNames: string[]): Promise<string[]> {
     const availableModules = ModuleRegistry.list();
     const invalidModules = moduleNames.filter(
-      (name) => !availableModules.includes(name)
+      (name) => !availableModules.includes(name),
     );
 
     if (invalidModules.length > 0) {
@@ -86,7 +86,7 @@ export class AddFlow {
         true,
         1,
         false,
-        { invalidModules, availableModules }
+        { invalidModules, availableModules },
       );
     }
 
@@ -95,7 +95,7 @@ export class AddFlow {
 
   private showInvalidModulesError(invalidModules: string[]): void {
     log.error(
-      `${chalk.red("❌ Invalid modules:")} ${invalidModules.join(", ")}`
+      `${chalk.red("❌ Invalid modules:")} ${invalidModules.join(", ")}`,
     );
     log.message("");
     log.message(chalk.yellow("📦 Available modules:"));
@@ -103,8 +103,8 @@ export class AddFlow {
     ModuleRegistry.getAll().forEach((module) => {
       log.message(
         `  ${chalk.cyan(module.name.padEnd(20))} ${chalk.gray(
-          module.description
-        )}`
+          module.description,
+        )}`,
       );
     });
 
@@ -118,7 +118,7 @@ export class AddFlow {
     const moduleText = modules.length === 1 ? "module" : "modules";
 
     intro(
-      chalk.cyan(`${action} ${modules.length} ${moduleText} to your project`)
+      chalk.cyan(`${action} ${modules.length} ${moduleText} to your project`),
     );
   }
 
@@ -154,7 +154,7 @@ export class AddFlow {
 
   private async installModules(
     moduleNames: string[],
-    options: AddFlowOptions
+    options: AddFlowOptions,
   ): Promise<Map<string, InstallResult>> {
     const results = new Map<string, InstallResult>();
     const context = await this.moduleInstaller.prepareContext(process.cwd());
@@ -178,7 +178,7 @@ export class AddFlow {
             force: false,
             verbose: options.verbose,
             dryRun: false,
-          }
+          },
         );
 
         results.set(moduleName, result);
@@ -204,7 +204,7 @@ export class AddFlow {
     log.info(chalk.dim("📊 Project details:"));
     log.message(chalk.dim(`  • Type: ${context.projectType}`));
     log.message(
-      chalk.dim(`  • TypeScript: ${context.hasTypeScript ? "Yes" : "No"}`)
+      chalk.dim(`  • TypeScript: ${context.hasTypeScript ? "Yes" : "No"}`),
     );
     log.message(chalk.dim(`  • Package Manager: ${context.packageManager}`));
     log.message("");
@@ -220,7 +220,9 @@ export class AddFlow {
     if (verbose && result.installedPackages?.length) {
       const pkgCount = result.installedPackages.length;
       log.message(
-        chalk.dim(`    Installed ${pkgCount} package${pkgCount > 1 ? "s" : ""}`)
+        chalk.dim(
+          `    Installed ${pkgCount} package${pkgCount > 1 ? "s" : ""}`,
+        ),
       );
     }
 
@@ -245,7 +247,7 @@ export class AddFlow {
   private handleInstallError(
     moduleName: string,
     error: unknown,
-    results: Map<string, InstallResult>
+    results: Map<string, InstallResult>,
   ): void {
     const errorResult: InstallResult = {
       success: false,
@@ -256,7 +258,7 @@ export class AddFlow {
               LogicErrorCodes.MODULE_INSTALL_FAILED,
               error instanceof Error ? error.message : String(error),
               false,
-              { module: moduleName }
+              { module: moduleName },
             ),
       ],
     };
@@ -270,17 +272,17 @@ export class AddFlow {
       }
     } else {
       log.error(
-        `    ${error instanceof Error ? error.message : String(error)}`
+        `    ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
   private showResults(results: Map<string, InstallResult>): void {
     const successful = Array.from(results.entries()).filter(
-      ([_, result]) => result.success
+      ([_, result]) => result.success,
     );
     const failed = Array.from(results.entries()).filter(
-      ([_, result]) => !result.success
+      ([_, result]) => !result.success,
     );
 
     if (successful.length > 0) {
@@ -288,8 +290,8 @@ export class AddFlow {
         chalk.green(
           `✨ Successfully installed ${successful.length} module${
             successful.length > 1 ? "s" : ""
-          }!`
-        )
+          }!`,
+        ),
       );
       this.showNextSteps(successful.map(([name]) => name));
     } else if (failed.length > 0) {
@@ -314,8 +316,8 @@ export class AddFlow {
     if (installedModules.includes("git-hooks")) {
       steps.push(
         `${chalk.cyan(
-          "git add -A && git commit -m 'Add dev tools'"
-        )} - Test your new git hooks`
+          "git add -A && git commit -m 'Add dev tools'",
+        )} - Test your new git hooks`,
       );
     }
 
@@ -366,7 +368,7 @@ export class AddFlow {
     }
 
     cancel(
-      error instanceof Error ? error.message : "An unexpected error occurred"
+      error instanceof Error ? error.message : "An unexpected error occurred",
     );
     process.exit(1);
   }

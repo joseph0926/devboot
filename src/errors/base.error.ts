@@ -1,6 +1,6 @@
 export abstract class BaseError<
   TCode extends string = string,
-  TContext = unknown
+  TContext = unknown,
 > extends Error {
   abstract readonly code: TCode;
   abstract readonly isRecoverable: boolean;
@@ -8,7 +8,7 @@ export abstract class BaseError<
   constructor(
     message: string,
     public readonly context?: TContext,
-    cause?: unknown
+    cause?: unknown,
   ) {
     super(message, { cause });
     this.name = this.constructor.name;

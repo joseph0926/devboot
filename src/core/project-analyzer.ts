@@ -18,7 +18,7 @@ export class ProjectAnalyzer {
         `Project path does not exist: ${projectPath}`,
         false,
         { projectPath, currentDir: process.cwd() },
-        "Please check the project path and try again."
+        "Please check the project path and try again.",
       );
     }
 
@@ -32,10 +32,10 @@ export class ProjectAnalyzer {
           {
             projectPath,
             hasPackageJson: await fileExists(
-              path.join(projectPath, "package.json")
+              path.join(projectPath, "package.json"),
             ),
           },
-          error
+          error,
         );
       }
       throw error;
@@ -58,7 +58,7 @@ export class ProjectAnalyzer {
   }
 
   private async detectProjectType(
-    packageJson: PackageJson
+    packageJson: PackageJson,
   ): Promise<ProjectType> {
     const deps = {
       ...packageJson.dependencies,
@@ -84,7 +84,7 @@ export class ProjectAnalyzer {
 
   private async detectPackageManager(
     projectPath: string,
-    packageJson: PackageJson
+    packageJson: PackageJson,
   ): Promise<PackageManager> {
     if (await fileExists(path.join(projectPath, "bun.lockb"))) {
       return "bun";
@@ -124,7 +124,7 @@ export class ProjectAnalyzer {
     const hasTypeScriptFiles =
       (await this.hasFilesWithExtension(
         path.join(projectPath, "src"),
-        ".ts"
+        ".ts",
       )) ||
       (await this.hasFilesWithExtension(path.join(projectPath, "src"), ".tsx"));
 
@@ -133,7 +133,7 @@ export class ProjectAnalyzer {
 
   private async hasFilesWithExtension(
     directory: string,
-    extension: string
+    extension: string,
   ): Promise<boolean> {
     try {
       const { readdir } = await import("fs/promises");

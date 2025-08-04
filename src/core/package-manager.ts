@@ -35,7 +35,7 @@ export interface PackageInstallResult {
 export class PackageManagerService {
   async install(
     deps: Dependencies,
-    options: PackageManagerOptions
+    options: PackageManagerOptions,
   ): Promise<PackageInstallResult> {
     const packages = this.formatPackages(deps);
 
@@ -77,7 +77,7 @@ export class PackageManagerService {
           packageManager: options.packageManager,
           originalError: errorMessage,
         },
-        error
+        error,
       );
     }
   }
@@ -87,10 +87,10 @@ export class PackageManagerService {
     dev: string[];
   } {
     const prod = Object.entries(deps.dependencies || {}).map(
-      ([name, version]) => `${name}@${version}`
+      ([name, version]) => `${name}@${version}`,
     );
     const dev = Object.entries(deps.devDependencies || {}).map(
-      ([name, version]) => `${name}@${version}`
+      ([name, version]) => `${name}@${version}`,
     );
 
     return { prod, dev };
@@ -100,12 +100,12 @@ export class PackageManagerService {
     packages: string[],
     isDev: boolean,
     options: PackageManagerOptions,
-    spinner: Ora
+    spinner: Ora,
   ): Promise<void> {
     const command = this.buildInstallCommand(
       packages,
       isDev,
-      options.packageManager
+      options.packageManager,
     );
 
     spinner.text = `Installing ${isDev ? "dev " : ""}dependencies...`;
@@ -131,7 +131,7 @@ export class PackageManagerService {
             stderr,
             packageManager: options.packageManager,
             packages,
-          }
+          },
         );
       }
     } catch (error) {
@@ -147,7 +147,7 @@ export class PackageManagerService {
             {
               packageManager: options.packageManager,
               errorCode: error.code,
-            }
+            },
           );
         }
 
@@ -161,7 +161,7 @@ export class PackageManagerService {
               errorCode: error.code,
               packages,
             },
-            "Try running with sudo or check npm/yarn permissions"
+            "Try running with sudo or check npm/yarn permissions",
           );
         }
 
@@ -175,7 +175,7 @@ export class PackageManagerService {
               errorCode: error.code,
               packages,
             },
-            "Check your internet connection and try again"
+            "Check your internet connection and try again",
           );
         }
       }
@@ -199,7 +199,7 @@ export class PackageManagerService {
   private buildInstallCommand(
     packages: string[],
     isDev: boolean,
-    packageManager: "npm" | "pnpm" | "yarn" | "bun"
+    packageManager: "npm" | "pnpm" | "yarn" | "bun",
   ): string {
     const packageList = packages.join(" ");
 
@@ -218,14 +218,14 @@ export class PackageManagerService {
           `Unsupported package manager: ${packageManager}`,
           false,
           { packageManager },
-          "Supported package managers: npm, pnpm, yarn, bun"
+          "Supported package managers: npm, pnpm, yarn, bun",
         );
     }
   }
 
   async uninstall(
     packages: string[],
-    options: PackageManagerOptions
+    options: PackageManagerOptions,
   ): Promise<{ success: boolean; error?: Error }> {
     if (packages.length === 0) {
       return { success: true };
@@ -233,7 +233,7 @@ export class PackageManagerService {
 
     const command = this.buildUninstallCommand(
       packages,
-      options.packageManager
+      options.packageManager,
     );
     const spinner = logger.spinner("Uninstalling packages...");
 
@@ -266,7 +266,7 @@ export class PackageManagerService {
             {
               packageManager: options.packageManager,
               errorCode: error.code,
-            }
+            },
           );
         }
 
@@ -280,7 +280,7 @@ export class PackageManagerService {
               errorCode: error.code,
               packages,
             },
-            "Try running with sudo or check permissions"
+            "Try running with sudo or check permissions",
           );
         }
       }
@@ -298,14 +298,14 @@ export class PackageManagerService {
           errorMessage,
           packageManager: options.packageManager,
         },
-        "Check if packages are installed and try again"
+        "Check if packages are installed and try again",
       );
     }
   }
 
   private buildUninstallCommand(
     packages: string[],
-    packageManager: "npm" | "pnpm" | "yarn" | "bun"
+    packageManager: "npm" | "pnpm" | "yarn" | "bun",
   ): string {
     const packageList = packages.join(" ");
 
@@ -324,7 +324,7 @@ export class PackageManagerService {
           `Unsupported package manager: ${packageManager}`,
           false,
           { packageManager },
-          "Supported package managers: npm, pnpm, yarn, bun"
+          "Supported package managers: npm, pnpm, yarn, bun",
         );
     }
   }

@@ -41,7 +41,7 @@ export class ListCommand {
     } catch (error) {
       if (options.installed) {
         ErrorLogger.logWarning(
-          "Not in a Node.js project - cannot check installed modules"
+          "Not in a Node.js project - cannot check installed modules",
         );
         process.exit(ExitCodes.SUCCESS);
       }
@@ -66,7 +66,7 @@ export class ListCommand {
       log.message(
         `  ${chalk.cyan(module.name.padEnd(20))} ${
           module.description
-        } ${status}`
+        } ${status}`,
       );
       displayedCount++;
     }
@@ -80,7 +80,7 @@ export class ListCommand {
     if (!options.installed && isInProject) {
       log.message(chalk.gray("Use 'devboot add <module>' to add a module"));
       log.message(
-        chalk.gray("Use 'devboot list -i' to see only installed modules")
+        chalk.gray("Use 'devboot list -i' to see only installed modules"),
       );
     } else if (!isInProject) {
       log.message(chalk.gray("Run 'devboot init' in a project to get started"));
@@ -90,7 +90,7 @@ export class ListCommand {
   }
 
   private static async getInstalledModules(
-    projectPath: string
+    projectPath: string,
   ): Promise<string[]> {
     const installed: string[] = [];
     const modules = ModuleRegistry.getAll();
@@ -102,7 +102,7 @@ export class ListCommand {
         }
       } catch (error) {
         logger.debug(
-          `Failed to check if ${module.name} is installed: ${error}`
+          `Failed to check if ${module.name} is installed: ${error}`,
         );
       }
     }

@@ -55,7 +55,7 @@ export class TypeScriptModule extends BaseModule {
 
         if (existingConfig.isValid) {
           result.warnings.push(
-            "tsconfig.json already exists. Use --force to reconfigure or we'll merge with existing settings."
+            "tsconfig.json already exists. Use --force to reconfigure or we'll merge with existing settings.",
           );
 
           if (existingConfig.warnings.length > 0) {
@@ -70,7 +70,7 @@ export class TypeScriptModule extends BaseModule {
 
       if (!hasTypeScript) {
         result.warnings.push(
-          "TypeScript not found in dependencies. It will be installed."
+          "TypeScript not found in dependencies. It will be installed.",
         );
       }
 
@@ -124,13 +124,12 @@ export class TypeScriptModule extends BaseModule {
   }
 
   async getFilesToCreate(
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<Map<string, string>> {
     const files = new Map<string, string>();
 
     try {
       let config: string;
-      let presetKey: string | null = null;
 
       if (!options.dryRun && !this.generatedConfig) {
         const builder = new TypeScriptConfigBuilder();
@@ -138,7 +137,7 @@ export class TypeScriptModule extends BaseModule {
           const result = await builder.build(options);
           this.generatedConfig = result.config;
           this.additionalFiles = result.additionalFiles;
-          presetKey = result.presetKey;
+          // presetKey stored in result if needed
           config = this.generatedConfig;
         } catch (error) {
           if (
@@ -148,7 +147,7 @@ export class TypeScriptModule extends BaseModule {
             throw new SimpleLogicError(
               LogicErrorCodes.USER_CANCELLED,
               "TypeScript setup cancelled by user",
-              false
+              false,
             );
           }
           throw error;
@@ -163,7 +162,7 @@ export class TypeScriptModule extends BaseModule {
 
       if (this.additionalFiles) {
         for (const [fileName, content] of Object.entries(
-          this.additionalFiles
+          this.additionalFiles,
         )) {
           files.set(fileName, content);
         }
@@ -174,7 +173,7 @@ export class TypeScriptModule extends BaseModule {
         if (!(await fileExists(nextEnvPath))) {
           files.set(
             "next-env.d.ts",
-            '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// NOTE: This file should not be edited\n// see https://nextjs.org/docs/app/building-your-application/configuring/typescript for more information.\n'
+            '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// NOTE: This file should not be edited\n// see https://nextjs.org/docs/app/building-your-application/configuring/typescript for more information.\n',
           );
         }
       }
@@ -184,7 +183,7 @@ export class TypeScriptModule extends BaseModule {
         if (!(await fileExists(viteEnvPath))) {
           files.set(
             "src/vite-env.d.ts",
-            '/// <reference types="vite/client" />\n'
+            '/// <reference types="vite/client" />\n',
           );
         }
       }
@@ -202,7 +201,7 @@ export class TypeScriptModule extends BaseModule {
         {
           module: this.name,
           error: error instanceof Error ? error.message : String(error),
-        }
+        },
       );
     }
   }
@@ -214,13 +213,18 @@ export class TypeScriptModule extends BaseModule {
   }
 
   private async generateDefaultConfig(
-    options: InstallOptions
+    options: InstallOptions,
   ): Promise<string> {
-    const presetKey = detectBestPreset(options);
-    const preset = FRAMEWORK_PRESETS[presetKey || "node-commonjs"];
+    const detectedPresetKey = detectBestPreset(options);
+    const presetKey = detectedPresetKey || "node-commonjs";
+    const preset = FRAMEWORK_PRESETS[presetKey];
 
-    if (options.verbose) {
+    if (preset && options.verbose) {
       logger.info(`Using ${preset.name} preset for TypeScript configuration`);
+    }
+
+    if (!preset) {
+      throw new Error(`Unknown preset: ${presetKey}`);
     }
 
     return JSON.stringify(preset.config, null, 2);
@@ -241,7 +245,7 @@ export class TypeScriptModule extends BaseModule {
           LogicErrorCodes.FILE_NOT_FOUND,
           "tsconfig.json not found",
           false,
-          { path: configPath }
+          { path: configPath },
         );
       }
 
@@ -277,8 +281,8 @@ export class TypeScriptModule extends BaseModule {
           new SimpleLogicError(
             LogicErrorCodes.MODULE_UNINSTALL_FAILED,
             `Failed to uninstall TypeScript config: ${error}`,
-            false
-          )
+            false,
+          ),
         );
       }
       return result;

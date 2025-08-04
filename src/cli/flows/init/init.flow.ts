@@ -45,7 +45,7 @@ export class InitFlow {
 
       const selectedModules = await this.selectModules(
         projectInfo,
-        existingConfigs
+        existingConfigs,
       );
 
       if (selectedModules.length === 0) {
@@ -64,7 +64,7 @@ export class InitFlow {
 
       const installResult = await this.installModules(
         selectedModules,
-        projectPath
+        projectPath,
       );
 
       this.showCompletionMessage(installResult);
@@ -102,7 +102,7 @@ export class InitFlow {
       const projectDetails = [
         `${chalk.bold("📦 Project:")} ${projectInfo.name}`,
         `${chalk.bold("🔧 Framework:")} ${this.getFrameworkDisplay(
-          projectInfo.projectType
+          projectInfo.projectType,
         )}`,
         `${chalk.bold("📋 Package Manager:")} ${projectInfo.packageManager}`,
       ];
@@ -139,7 +139,7 @@ export class InitFlow {
 
         note(
           `Found existing configurations:\n${chalk.yellow(configList)}`,
-          "⚠️  Existing Setup"
+          "⚠️  Existing Setup",
         );
       }
 
@@ -177,7 +177,7 @@ export class InitFlow {
 
   private async selectModules(
     projectInfo: ProjectInfo,
-    existingConfigs: string[]
+    existingConfigs: string[],
   ): Promise<string[]> {
     if (this.options.yes) {
       return this.getDefaultModulesForProject(projectInfo, existingConfigs);
@@ -194,7 +194,7 @@ export class InitFlow {
 
   private getDefaultModulesForProject(
     projectInfo: ProjectInfo,
-    existingConfigs: string[]
+    existingConfigs: string[],
   ): string[] {
     const modules = [];
 
@@ -222,11 +222,11 @@ export class InitFlow {
 
   private async checkConflicts(
     existingConfigs: string[],
-    selectedModules: string[]
+    selectedModules: string[],
   ): Promise<void> {
     const { hasConflicts, errors } = ConfigChecker.checkConflicts(
       existingConfigs,
-      selectedModules
+      selectedModules,
     );
 
     if (hasConflicts) {
@@ -253,14 +253,14 @@ export class InitFlow {
   }
 
   private async confirmInstallationPlan(
-    selectedModules: string[]
+    selectedModules: string[],
   ): Promise<boolean> {
     const planDetails = selectedModules
       .map((mod) => {
         const module = ModuleRegistry.get(mod);
         return module
           ? `  • ${chalk.bold(module.displayName)} - ${chalk.gray(
-              module.description
+              module.description,
             )}`
           : `  • ${mod}`;
       })
@@ -268,7 +268,7 @@ export class InitFlow {
 
     note(
       `The following tools will be configured:\n${chalk.green(planDetails)}`,
-      "📋 Installation Plan"
+      "📋 Installation Plan",
     );
 
     const shouldProceed = await confirm({
@@ -286,7 +286,7 @@ export class InitFlow {
 
   private async installModules(
     selectedModules: string[],
-    projectPath: string
+    projectPath: string,
   ): Promise<InstallationResult> {
     const installOptions: InstallOptionsOnly = {
       verbose: this.options.verbose,
@@ -297,7 +297,7 @@ export class InitFlow {
     return InstallationStep.installModules(
       selectedModules,
       projectPath,
-      installOptions
+      installOptions,
     );
   }
 
@@ -325,12 +325,12 @@ export class InitFlow {
       "git-hooks": [
         `Stage your changes with ${chalk.cyan("git add .")}`,
         `Commit with ${chalk.cyan(
-          "git commit -m 'Add dev tools'"
+          "git commit -m 'Add dev tools'",
         )} - hooks will run automatically`,
       ],
       typescript: [
         `TypeScript is now optimized for your ${this.getFrameworkDisplay(
-          "react"
+          "react",
         )} project`,
       ],
       editorconfig: [

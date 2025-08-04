@@ -65,7 +65,7 @@ export class PackageInstallError extends LogicError<PackageErrorContext> {
 
     if (packages && packages.length > 0) {
       return `Failed to install: ${packages.join(
-        ", "
+        ", ",
       )}. Check the error message above.`;
     }
 

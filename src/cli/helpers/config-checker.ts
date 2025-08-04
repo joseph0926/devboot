@@ -51,7 +51,7 @@ export class ConfigChecker {
         LogicErrorCodes.CONFIG_READ_ERROR,
         "Failed to get detailed config info",
         false,
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: error instanceof Error ? error.message : String(error) },
       );
     }
   }
@@ -69,7 +69,7 @@ export class ConfigChecker {
 
   static checkConflicts(
     installedConfigs: string[],
-    selectedModules: string[]
+    selectedModules: string[],
   ): {
     hasConflicts: boolean;
     conflicts: Array<{ module: string; conflictsWith: string }>;
@@ -84,7 +84,7 @@ export class ConfigChecker {
         if (!metadata?.conflictsWith) continue;
 
         const conflictingConfigs = metadata.conflictsWith.filter((conflict) =>
-          installedConfigs.includes(conflict)
+          installedConfigs.includes(conflict),
         );
 
         if (conflictingConfigs.length > 0) {
@@ -92,7 +92,7 @@ export class ConfigChecker {
             ...conflictingConfigs.map((conflict) => ({
               module,
               conflictsWith: conflict,
-            }))
+            })),
           );
 
           errors.push(
@@ -101,8 +101,8 @@ export class ConfigChecker {
               {
                 configName: module,
                 conflicts: conflictingConfigs,
-              }
-            )
+              },
+            ),
           );
         }
       } catch (error) {

@@ -68,7 +68,7 @@ export class TypeScriptConfigBuilder {
       }
 
       prompts.log.info(
-        `\n🎯 Detected project type: ${chalk.cyan(preset.name)}`
+        `\n🎯 Detected project type: ${chalk.cyan(preset.name)}`,
       );
       prompts.log.message(chalk.gray(`  ${preset.description}`));
 
@@ -162,14 +162,14 @@ export class TypeScriptConfigBuilder {
   }
 
   private async selectPresetManually(
-    context: ProjectContext
+    context: ProjectContext,
   ): Promise<BuildResult> {
     const allPresets = Object.entries(FRAMEWORK_PRESETS).map(
       ([key, preset]) => ({
         value: key,
         label: preset.name,
         hint: preset.description,
-      })
+      }),
     );
 
     const selectedKey = await prompts.select({
@@ -259,8 +259,8 @@ export class TypeScriptConfigBuilder {
     prompts.log.message(chalk.gray(`  • Module: ${compilerOptions.module}`));
     prompts.log.message(
       chalk.gray(
-        `  • Strict mode: ${compilerOptions.strict ? "Enabled" : "Disabled"}`
-      )
+        `  • Strict mode: ${compilerOptions.strict ? "Enabled" : "Disabled"}`,
+      ),
     );
 
     if (compilerOptions.jsx) {
@@ -270,8 +270,8 @@ export class TypeScriptConfigBuilder {
     if (compilerOptions.paths) {
       prompts.log.message(
         chalk.gray(
-          `  • Path aliases: ${Object.keys(compilerOptions.paths).join(", ")}`
-        )
+          `  • Path aliases: ${Object.keys(compilerOptions.paths).join(", ")}`,
+        ),
       );
     }
 
@@ -279,9 +279,9 @@ export class TypeScriptConfigBuilder {
       prompts.log.message(
         chalk.gray(
           `  • Additional files: ${Object.keys(preset.additionalFiles).join(
-            ", "
-          )}`
-        )
+            ", ",
+          )}`,
+        ),
       );
     }
   }
@@ -509,10 +509,10 @@ export class TypeScriptConfigBuilder {
 
     prompts.log.info("Target versions & typical environments:");
     prompts.log.message(
-      chalk.gray("  • ES2022: Node 16+, modern browsers (recommended)")
+      chalk.gray("  • ES2022: Node 16+, modern browsers (recommended)"),
     );
     prompts.log.message(
-      chalk.gray("  • ES2020: Node 14+, browsers since ~2020")
+      chalk.gray("  • ES2020: Node 14+, browsers since ~2020"),
     );
     prompts.log.message(chalk.gray("  • ES2017: Broad compatibility"));
     prompts.log.message(chalk.gray("  • ES2015: Maximum compatibility"));
@@ -564,10 +564,10 @@ export class TypeScriptConfigBuilder {
 
     prompts.log.info("Differences by strictness level:");
     prompts.log.message(
-      chalk.gray("  • Strict: enable all strict checks (recommended)")
+      chalk.gray("  • Strict: enable all strict checks (recommended)"),
     );
     prompts.log.message(
-      chalk.gray("  • Moderate: balanced defaults for migrations")
+      chalk.gray("  • Moderate: balanced defaults for migrations"),
     );
     prompts.log.message(chalk.gray("  • Loose: minimal type checks"));
     prompts.log.message(chalk.gray("  • Custom: pick individual options"));
@@ -614,11 +614,11 @@ export class TypeScriptConfigBuilder {
         strictness === "strict"
           ? "Strict"
           : strictness === "moderate"
-          ? "Moderate"
-          : strictness === "loose"
-          ? "Loose"
-          : "Custom"
-      } mode selected`
+            ? "Moderate"
+            : strictness === "loose"
+              ? "Loose"
+              : "Custom"
+      } mode selected`,
     );
   }
 
@@ -674,7 +674,7 @@ export class TypeScriptConfigBuilder {
 
     prompts.log.info("Path aliases help shorten import paths:");
     prompts.log.message(
-      chalk.gray("  • import Button from '@/components/Button'")
+      chalk.gray("  • import Button from '@/components/Button'"),
     );
     prompts.log.message(chalk.gray("  • import { api } from '@/lib/api'"));
 
@@ -812,7 +812,7 @@ export class TypeScriptConfigBuilder {
     if (Object.keys(paths).length > 0) {
       this.config.compilerOptions.paths = paths;
       prompts.log.info(
-        `Configured ${Object.keys(paths).length} path alias(es) in total`
+        `Configured ${Object.keys(paths).length} path alias(es) in total`,
       );
     }
   }
@@ -888,7 +888,7 @@ export class TypeScriptConfigBuilder {
   }
 
   private async configureAdditionalOptions(
-    context: ProjectContext
+    context: ProjectContext,
   ): Promise<void> {
     const addMore = await prompts.confirm({
       message: "Configure additional options?",
