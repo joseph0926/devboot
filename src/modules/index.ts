@@ -2,6 +2,7 @@ import { BaseModule } from "./base.module.js";
 import { EditorConfigModule } from "./editorconfig/index.js";
 import { TypeScriptModule } from "./typescript/index.js";
 import { PrettierModule } from "./prettier/index.js";
+import { ESLintModule } from "./eslint/index.js";
 
 export class ModuleRegistry {
   private static modules = new Map<string, BaseModule>();
@@ -10,6 +11,7 @@ export class ModuleRegistry {
     this.register(new EditorConfigModule());
     this.register(new PrettierModule());
     this.register(new TypeScriptModule());
+    this.register(new ESLintModule());
     // this.register(new GitHooksModule());
   }
 
