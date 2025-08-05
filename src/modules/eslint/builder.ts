@@ -32,8 +32,14 @@ export class ESLintConfigBuilder {
   private configType: "legacy" | "flat" = "legacy";
   private configFileName: string = ".eslintrc.json";
   private projectEnvironment: ProjectEnvironment | null = null;
+  private nonInteractive: boolean = false;
 
-  async build(context: ProjectContext): Promise<ESLintBuildResult> {
+  async build(context: ProjectContext, nonInteractive: boolean = false): Promise<ESLintBuildResult> {
+    this.nonInteractive = nonInteractive;
+    
+    if (nonInteractive) {
+      return this.buildNonInteractive(context);
+    }
     prompts.intro(chalk.blue("🔧 ESLint Configuration Setup"));
 
     // Detect project environment
@@ -94,6 +100,38 @@ export class ESLintConfigBuilder {
       await this.customSetup(context);
     }
 
+    return await this.finalizeConfiguration();
+  }
+
+  private async buildNonInteractive(context: ProjectContext): Promise<ESLintBuildResult> {
+    // Detect project environment
+    this.projectEnvironment = await ConfigFormatDetector.detectProjectEnvironment(context.projectPath);
+    
+    // Auto-detect best configuration
+    const detectedPresetKey = detectBestESLintPreset(context);
+    
+    // Choose ESLint version based on Node.js version or default to v9
+    this.configType = "flat"; // Default to modern flat config
+    
+    // Select recommended config file format
+    const recommended = ConfigFormatDetector.recommendESLintConfigFormat(
+      this.projectEnvironment, 
+      "v9"
+    );
+    this.configFileName = recommended.filename;
+    
+    // Use detected preset or fallback to a default
+    const availablePresets = ESLINT_V9_PRESETS;
+    const presetKey = detectedPresetKey || "standard";
+    const preset = availablePresets[presetKey];
+    
+    if (preset) {
+      this.selectedPreset = preset;
+      this.presetKey = presetKey;
+      this.config = JSON.parse(JSON.stringify(preset.config));
+      this.dependencies = { ...preset.dependencies.devDependencies };
+    }
+    
     return await this.finalizeConfiguration();
   }
 
@@ -583,29 +621,33 @@ export class ESLintConfigBuilder {
   }
 
   private async finalizeConfiguration(): Promise<ESLintBuildResult> {
-    const preview = this.generatePreview();
-    prompts.log.message("");
-    prompts.log.info("📄 Final configuration preview:");
-    prompts.log.message(chalk.gray(preview));
+    if (!this.nonInteractive) {
+      const preview = this.generatePreview();
+      prompts.log.message("");
+      prompts.log.info("📄 Final configuration preview:");
+      prompts.log.message(chalk.gray(preview));
 
-    const confirmed = await prompts.confirm({
-      message: "Apply this configuration?",
-      initialValue: true,
-    });
-
-    if (prompts.isCancel(confirmed) || !confirmed) {
-      prompts.cancel("Setup canceled");
-      throw new Error("Configuration cancelled");
-    }
-
-    if (this.selectedPreset?.additionalFiles) {
-      prompts.log.info(chalk.yellow("\n📝 Additional files to be created:"));
-      Object.keys(this.selectedPreset.additionalFiles).forEach((file) => {
-        prompts.log.message(chalk.gray(`  • ${file}`));
+      const confirmed = await prompts.confirm({
+        message: "Apply this configuration?",
+        initialValue: true,
       });
+
+      if (prompts.isCancel(confirmed) || !confirmed) {
+        prompts.cancel("Setup canceled");
+        throw new Error("Configuration cancelled");
+      }
     }
 
-    prompts.outro(chalk.green("✅ ESLint configuration completed!"));
+    if (!this.nonInteractive) {
+      if (this.selectedPreset?.additionalFiles) {
+        prompts.log.info(chalk.yellow("\n📝 Additional files to be created:"));
+        Object.keys(this.selectedPreset.additionalFiles).forEach((file) => {
+          prompts.log.message(chalk.gray(`  • ${file}`));
+        });
+      }
+
+      prompts.outro(chalk.green("✅ ESLint configuration completed!"));
+    }
 
     const configContent = this.generateConfigContent();
 
@@ -765,7 +807,35 @@ ${configString}
   private formatFlatConfigObject(configObjects: any[]): string {
     return configObjects
       .map((config) => {
-        const lines = JSON.stringify(config, null, 2)
+        let configString = JSON.stringify(config, null, 2);
+        
+        // Fix globals to be proper JavaScript object syntax instead of string
+        configString = configString.replace(
+          /"globals":\s*"([^"]+)"/g,
+          '"globals": $1'
+        );
+        
+        // Fix parser reference to be variable instead of string
+        configString = configString.replace(
+          /"parser":\s*"tsParser"/g,
+          '"parser": tsParser'
+        );
+        
+        // Fix plugin references to be variables instead of strings
+        configString = configString.replace(
+          /"@typescript-eslint":\s*"tseslint"/g,
+          '"@typescript-eslint": tseslint'
+        );
+        configString = configString.replace(
+          /"react":\s*"react"/g,
+          '"react": react'
+        );
+        configString = configString.replace(
+          /"react-hooks":\s*"reactHooks"/g,
+          '"react-hooks": reactHooks'
+        );
+        
+        const lines = configString
           .split("\n")
           .map((line, index) => {
             if (index === 0) return `  ${line}`;

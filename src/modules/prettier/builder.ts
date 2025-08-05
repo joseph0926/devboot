@@ -1,6 +1,10 @@
 import * as prompts from "@clack/prompts";
 import chalk from "chalk";
 import type { ProjectContext } from "../../types/project.type.js";
+import { 
+  ConfigFormatDetector,
+  type ProjectEnvironment 
+} from "../eslint/config-format-detector.js";
 import { fileExists } from "../../utils/file.js";
 import path from "path";
 
@@ -104,6 +108,12 @@ export const PRETTIER_PRESETS = {
   },
 } as const;
 
+export interface PrettierBuildResult {
+  config: string;
+  configFileName: string;
+  presetName: string | null;
+}
+
 export class PrettierConfigBuilder {
   private config: PrettierConfig = {
     semi: true,
@@ -114,11 +124,26 @@ export class PrettierConfigBuilder {
     printWidth: 80,
     endOfLine: "lf",
   };
+  private configFileName: string = ".prettierrc.json";
+  private projectEnvironment: ProjectEnvironment | null = null;
+  private selectedPresetName: string | null = null;
+  private nonInteractive: boolean = false;
 
-  async build(context: ProjectContext): Promise<string> {
+  async build(context: ProjectContext, nonInteractive: boolean = false): Promise<PrettierBuildResult> {
+    this.nonInteractive = nonInteractive;
+    
+    if (nonInteractive) {
+      return this.buildNonInteractive(context);
+    }
     prompts.intro(chalk.blue("🎨 Prettier Configuration Setup"));
 
+    // Detect project environment
+    this.projectEnvironment = await ConfigFormatDetector.detectProjectEnvironment(context.projectPath);
+    
     await this.checkExistingConfig(context);
+    
+    // Ask user about config file format preference
+    await this.selectConfigFileFormat();
 
     const setupMode = await prompts.select({
       message: "How would you like to configure Prettier?",
@@ -158,7 +183,26 @@ export class PrettierConfigBuilder {
         break;
     }
 
-    return this.finalizeConfiguration();
+    return await this.finalizeConfiguration();
+  }
+
+  private async buildNonInteractive(context: ProjectContext): Promise<PrettierBuildResult> {
+    // Detect project environment
+    this.projectEnvironment = await ConfigFormatDetector.detectProjectEnvironment(context.projectPath);
+    
+    // Select recommended config file format
+    const recommended = ConfigFormatDetector.recommendPrettierConfigFormat(this.projectEnvironment);
+    this.configFileName = recommended.filename;
+    
+    // Use standard preset as default
+    const preset = PRETTIER_PRESETS.standard;
+    this.config = { ...this.config, ...preset.config };
+    this.selectedPresetName = preset.name;
+    
+    // Apply project-specific settings
+    await this.applyProjectSpecificSettings(context);
+    
+    return await this.finalizeConfiguration();
   }
 
   private async presetSetup(context: ProjectContext): Promise<void> {
@@ -185,6 +229,7 @@ export class PrettierConfigBuilder {
     const preset =
       PRETTIER_PRESETS[selectedPreset as keyof typeof PRETTIER_PRESETS];
     this.config = { ...this.config, ...preset.config };
+    this.selectedPresetName = preset.name;
 
     const showPreview = await prompts.confirm({
       message: "Would you like to see the configuration details?",
@@ -690,24 +735,123 @@ export class PrettierConfigBuilder {
     });
   }
 
-  private async finalizeConfiguration(): Promise<string> {
-    const preview = JSON.stringify(this.config, null, 2);
-    prompts.log.message("");
-    prompts.log.info("📄 Final Prettier configuration:");
-    prompts.log.message(chalk.gray(preview));
+  private async finalizeConfiguration(): Promise<PrettierBuildResult> {
+    if (!this.nonInteractive) {
+      const preview = JSON.stringify(this.config, null, 2);
+      prompts.log.message("");
+      prompts.log.info("📄 Final Prettier configuration:");
+      prompts.log.message(chalk.gray(preview));
 
-    const confirmed = await prompts.confirm({
-      message: "Apply this configuration?",
+      const confirmed = await prompts.confirm({
+        message: "Apply this configuration?",
+        initialValue: true,
+      });
+
+      if (!confirmed || prompts.isCancel(confirmed)) {
+        prompts.cancel("Configuration cancelled");
+        throw new Error("Configuration cancelled");
+      }
+
+      prompts.outro(chalk.green("✅ Prettier configuration complete!"));
+    }
+
+    return {
+      config: this.generateConfigContent(),
+      configFileName: this.configFileName,
+      presetName: this.selectedPresetName,
+    };
+  }
+
+  private generateConfigContent(): string {
+    const extension = this.configFileName.split('.').pop() || 'json';
+    
+    switch (extension) {
+      case 'js':
+      case 'cjs':
+        return this.generateJSConfig(extension === 'cjs');
+      case 'mjs':
+        return this.generateMJSConfig();
+      case 'json':
+      default:
+        return JSON.stringify(this.config, null, 2);
+    }
+  }
+
+  private generateJSConfig(isCommonJS: boolean = false): string {
+    const configStr = JSON.stringify(this.config, null, 2)
+      .replace(/"([^"]+)":/g, '$1:') // Remove quotes from keys
+      .replace(/"/g, "'"); // Use single quotes
+    
+    if (isCommonJS) {
+      return `module.exports = ${configStr};`;
+    } else {
+      return `export default ${configStr};`;
+    }
+  }
+
+  private generateMJSConfig(): string {
+    const configStr = JSON.stringify(this.config, null, 2)
+      .replace(/"([^"]+)":/g, '$1:') // Remove quotes from keys
+      .replace(/"/g, "'"); // Use single quotes
+    
+    return `export default ${configStr};`;
+  }
+
+  private async selectConfigFileFormat(): Promise<void> {
+    if (!this.projectEnvironment) {
+      throw new Error("Project environment not detected");
+    }
+
+    // Get recommended format
+    const recommended = ConfigFormatDetector.recommendPrettierConfigFormat(this.projectEnvironment);
+
+    // Show recommendation
+    prompts.log.info(`\n💡 Recommended format: ${chalk.cyan(recommended.filename)}`);
+    prompts.log.message(chalk.gray(`   ${recommended.reason}`));
+
+    const useRecommended = await prompts.confirm({
+      message: `Use recommended format (${recommended.filename})?`,
       initialValue: true,
     });
 
-    if (!confirmed || prompts.isCancel(confirmed)) {
-      prompts.cancel("Configuration cancelled");
+    if (prompts.isCancel(useRecommended)) {
+      prompts.cancel("Setup canceled");
       throw new Error("Configuration cancelled");
     }
 
-    prompts.outro(chalk.green("✅ Prettier configuration complete!"));
+    if (useRecommended) {
+      this.configFileName = recommended.filename;
+      return;
+    }
 
-    return JSON.stringify(this.config, null, 2);
+    // Show all available formats
+    const availableFormats = ConfigFormatDetector.getAvailablePrettierFormats();
+    const formatOptions = availableFormats.map(format => ({
+      value: format.filename,
+      label: `${format.filename} (${format.extension.toUpperCase()})`,
+      hint: format.description
+    }));
+
+    const selectedFormat = await prompts.select({
+      message: "Choose a configuration file format:",
+      options: formatOptions,
+    });
+
+    if (prompts.isCancel(selectedFormat)) {
+      prompts.cancel("Setup canceled");
+      throw new Error("Configuration cancelled");
+    }
+
+    this.configFileName = selectedFormat;
+
+    // Show details about selected format
+    const selectedFormatDetails = availableFormats.find(f => f.filename === selectedFormat);
+    if (selectedFormatDetails) {
+      prompts.log.message(`\n✅ Selected: ${chalk.cyan(selectedFormat)}`);
+      prompts.log.message(chalk.green(`   Pros: ${selectedFormatDetails.pros.join(", ")}`));
+      if (selectedFormatDetails.cons.length > 0) {
+        prompts.log.message(chalk.yellow(`   Cons: ${selectedFormatDetails.cons.join(", ")}`));
+      }
+    }
   }
 }

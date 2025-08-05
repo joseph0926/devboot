@@ -15,7 +15,11 @@ vi.mock('fs/promises', () => ({
 
 vi.mock('../../../src/modules/prettier/builder', () => ({
   PrettierConfigBuilder: vi.fn().mockImplementation(() => ({
-    build: vi.fn().mockResolvedValue('{"semi": true, "singleQuote": true}'),
+    build: vi.fn().mockResolvedValue({
+      config: '{"semi": true, "singleQuote": true}',
+      configFileName: '.prettierrc.json',
+      presetName: 'Standard'
+    }),
   })),
 }));
 

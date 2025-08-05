@@ -140,7 +140,9 @@ export class ESLintModule extends BaseModule {
       if (!options.dryRun && !this.generatedResult) {
         const builder = new ESLintConfigBuilder();
         try {
-          this.generatedResult = await builder.build(options);
+          // Use non-interactive mode for dry-run and when CI environment is detected
+          const nonInteractive = options.dryRun || process.env.CI === 'true' || !process.stdin.isTTY;
+          this.generatedResult = await builder.build(options, nonInteractive);
           result = this.generatedResult;
         } catch (error) {
           if (

@@ -12,11 +12,11 @@ import { LogicErrorCodes } from "../../types/error.type.js";
 import { FileNotFoundError } from "../../errors/logic/file.error.js";
 import { unlink } from "fs/promises";
 import { BaseError } from "../../errors/base.error.js";
-import { PrettierConfigBuilder } from "./builder.js";
+import { PrettierConfigBuilder, type PrettierBuildResult } from "./builder.js";
 import { logger } from "../../utils/logger.js";
 
 export class PrettierModule extends BaseModule {
-  private generatedConfig?: string;
+  private generatedResult?: PrettierBuildResult;
 
   constructor() {
     super({
@@ -27,7 +27,11 @@ export class PrettierModule extends BaseModule {
         ".prettierrc",
         ".prettierrc.json",
         ".prettierrc.js",
+        ".prettierrc.cjs",
+        ".prettierrc.mjs",
         "prettier.config.js",
+        "prettier.config.cjs",
+        "prettier.config.mjs",
       ],
       conflicts: [],
       version: "1.0.0",
@@ -40,7 +44,11 @@ export class PrettierModule extends BaseModule {
         ".prettierrc",
         ".prettierrc.json",
         ".prettierrc.js",
+        ".prettierrc.cjs",
+        ".prettierrc.mjs",
         "prettier.config.js",
+        "prettier.config.cjs",
+        "prettier.config.mjs",
         ".prettierrc.yaml",
         ".prettierrc.yml",
       ];
@@ -120,13 +128,15 @@ export class PrettierModule extends BaseModule {
     const files = new Map<string, string>();
 
     try {
-      let config: string;
+      let result: PrettierBuildResult;
 
-      if (!options.dryRun && !this.generatedConfig) {
+      if (!options.dryRun && !this.generatedResult) {
         const builder = new PrettierConfigBuilder();
         try {
-          this.generatedConfig = await builder.build(options);
-          config = this.generatedConfig;
+          // Use non-interactive mode for dry-run and when CI environment is detected
+          const nonInteractive = options.dryRun || process.env.CI === 'true' || !process.stdin.isTTY;
+          this.generatedResult = await builder.build(options, nonInteractive);
+          result = this.generatedResult;
         } catch (error) {
           if (
             error instanceof Error &&
@@ -140,17 +150,17 @@ export class PrettierModule extends BaseModule {
           }
           throw error;
         }
-      } else if (this.generatedConfig) {
-        config = this.generatedConfig;
+      } else if (this.generatedResult) {
+        result = this.generatedResult;
       } else {
-        config = this.generateDefaultConfig(options);
+        result = this.generateDefaultConfig(options);
 
         if (options.verbose) {
           logger.info("Using default Prettier configuration");
         }
       }
 
-      files.set(".prettierrc.json", config);
+      files.set(result.configFileName, result.config);
 
       const ignoreContent = this.generateIgnoreFile(options);
       files.set(".prettierignore", ignoreContent);
@@ -189,7 +199,11 @@ export class PrettierModule extends BaseModule {
         ".prettierrc",
         ".prettierrc.json",
         ".prettierrc.js",
+        ".prettierrc.cjs",
+        ".prettierrc.mjs",
         "prettier.config.js",
+        "prettier.config.cjs",
+        "prettier.config.mjs",
         ".prettierrc.yaml",
         ".prettierrc.yml",
         ".prettierignore",
@@ -259,7 +273,7 @@ export class PrettierModule extends BaseModule {
     return result;
   }
 
-  private generateDefaultConfig(options: InstallOptions): string {
+  private generateDefaultConfig(options: InstallOptions): PrettierBuildResult {
     const config: Record<string, any> = {
       semi: true,
       singleQuote: true,
@@ -282,7 +296,14 @@ export class PrettierModule extends BaseModule {
       config.parser = "typescript";
     }
 
-    return JSON.stringify(config, null, 2);
+    // Default to JSON format for backward compatibility
+    const configFileName = ".prettierrc.json";
+
+    return {
+      config: JSON.stringify(config, null, 2),
+      configFileName,
+      presetName: null,
+    };
   }
 
   private generateIgnoreFile(options: InstallOptions): string {
