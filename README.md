@@ -20,7 +20,7 @@ Setting up a modern development environment is repetitive and time-consuming. Ev
 
 DevBoot automates all of this with **intelligent environment detection** and **flexible configuration formats**. Run one command, and get a perfectly configured project that adapts to your setup.
 
-## 🎯 What's New in v0.1.0
+## 🎯 What's New in v0.2.0
 
 - **🔧 ESLint v9 Flat Config Support** - Full support for both legacy (.eslintrc) and modern (eslint.config) formats
 - **📁 Smart Config Format Detection** - Automatically chooses the best config file format (.json, .js, .mjs, .cjs, .ts, .yml)
@@ -320,7 +320,7 @@ src/
 
 ## 📝 Changelog
 
-### v0.1.0 (Latest)
+### v0.2.0 (Latest)
 - ✨ ESLint v9 Flat Config support
 - 🔧 Intelligent config format detection
 - 🤖 Non-interactive mode for CI/CD
