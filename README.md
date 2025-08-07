@@ -20,7 +20,15 @@ Setting up a modern development environment is repetitive and time-consuming. Ev
 
 DevBoot automates all of this with **intelligent environment detection** and **flexible configuration formats**. Run one command, and get a perfectly configured project that adapts to your setup.
 
-## 🎯 What's New in v0.2.0
+## 🎯 What's New in v0.2.1
+
+- **✨ Enhanced User Experience** - Beautiful emojis and improved progress indicators for package installation
+- **📦 Smart Package Display** - Clear categorization of dependencies vs dev dependencies with version info
+- **🎨 Better Error Messages** - User-friendly error messages with actionable suggestions and helpful icons
+- **🚀 Improved Installation Flow** - Enhanced confirmation prompts and completion messages
+- **💬 Interactive Feedback** - Real-time installation progress with package names and cheerful completion messages
+
+### Previous Updates (v0.2.0)
 
 - **🔧 ESLint v9 Flat Config Support** - Full support for both legacy (.eslintrc) and modern (eslint.config) formats
 - **📁 Smart Config Format Detection** - Automatically chooses the best config file format (.json, .js, .mjs, .cjs, .ts, .yml)
@@ -81,9 +89,11 @@ npx devboot init
 ### 🎨 Developer Experience
 
 - **Zero Config**: Sensible defaults that just work
-- **Interactive Setup**: Guided configuration with smart recommendations
-- **Package Manager Aware**: Works seamlessly with npm, pnpm, and yarn
-- **Error Recovery**: Helpful error messages with suggested solutions
+- **Interactive Setup**: Guided configuration with smart recommendations and beautiful visual feedback
+- **Package Manager Aware**: Works seamlessly with npm, pnpm, yarn, and bun
+- **Error Recovery**: Helpful error messages with actionable suggestions and helpful icons
+- **Progress Tracking**: Real-time installation progress with clear package categorization
+- **User-Friendly Messages**: Cheerful completion messages and intuitive prompts
 
 ## 🧩 Supported Modules
 
@@ -320,7 +330,15 @@ src/
 
 ## 📝 Changelog
 
-### v0.2.0 (Latest)
+### v0.2.1 (Latest)
+- ✨ Enhanced user experience with beautiful emojis and progress indicators
+- 📦 Smart package display with clear dependency categorization
+- 🎨 User-friendly error messages with actionable suggestions
+- 🚀 Improved installation flow with better confirmation prompts
+- 💬 Real-time installation progress and cheerful completion messages
+- 🛠️ Added support for bun package manager
+
+### v0.2.0
 - ✨ ESLint v9 Flat Config support
 - 🔧 Intelligent config format detection
 - 🤖 Non-interactive mode for CI/CD
