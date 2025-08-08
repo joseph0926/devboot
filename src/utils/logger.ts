@@ -30,6 +30,38 @@ export class Logger {
     }
   }
 
+  log(message: string) {
+    console.log(message);
+  }
+
+  plain(message: string) {
+    console.log(message);
+  }
+
+  gray(message: string) {
+    console.log(chalk.gray(message));
+  }
+
+  cyan(message: string) {
+    console.log(chalk.cyan(message));
+  }
+
+  bold(message: string) {
+    console.log(chalk.bold(message));
+  }
+
+  yellow(message: string) {
+    console.log(chalk.yellow(message));
+  }
+
+  red(message: string) {
+    console.log(chalk.red(message));
+  }
+
+  newline() {
+    console.log("");
+  }
+
   spinner(text: string): Ora {
     return ora({
       text,

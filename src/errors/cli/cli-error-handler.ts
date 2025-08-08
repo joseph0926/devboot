@@ -55,7 +55,7 @@ export class CLIErrorHandler {
 
     if (error.showHelp || options.showHelp) {
       console.log("");
-      console.log(chalk.gray("도움말을 보려면 다음 명령어를 실행하세요:"));
+      console.log(chalk.gray("For help, run the following command:"));
       console.log(chalk.cyan("  devboot --help"));
     }
 
@@ -63,7 +63,7 @@ export class CLIErrorHandler {
   }
 
   /**
-   * Logic 에러 처리
+   * Logic error handling
    */
   private static handleLogicError(
     error: LogicError,
@@ -79,7 +79,7 @@ export class CLIErrorHandler {
   }
 
   /**
-   * Base 에러 처리
+   * Base error handling
    */
   private static handleBaseError(
     error: BaseError,
@@ -94,7 +94,7 @@ export class CLIErrorHandler {
   }
 
   /**
-   * Node.js 시스템 에러 처리
+   * Node.js system error handling
    */
   private static handleNodeError(
     error: NodeError,
@@ -105,23 +105,23 @@ export class CLIErrorHandler {
 
     if (error.code === "ENOENT" || error.code === "EACCES" || error.code === "EPERM") {
       if ("path" in error) {
-        console.log(chalk.yellow(`\n💡 파일 경로: ${error.path}`));
+        console.log(chalk.yellow(`\n💡 File path: ${error.path}`));
       }
 
       if (error.code === "EACCES" || error.code === "EPERM") {
-        console.log(chalk.yellow("💡 관리자 권한이 필요할 수 있습니다 (sudo)"));
+        console.log(chalk.yellow("💡 Administrator privileges may be required (sudo)"));
       }
     }
 
     if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
-      console.log(chalk.yellow("\n💡 인터넷 연결을 확인해주세요"));
+      console.log(chalk.yellow("\n💡 Please check your internet connection"));
     }
 
     if (options.verbose) {
-      console.log(chalk.gray("\n시스템 에러 정보:"));
-      console.log(chalk.gray(`  코드: ${error.code}`));
-      console.log(chalk.gray(`  시스템 콜: ${error.syscall}`));
-      if (error.path) console.log(chalk.gray(`  경로: ${error.path}`));
+      console.log(chalk.gray("\nSystem error info:"));
+      console.log(chalk.gray(`  Code: ${error.code}`));
+      console.log(chalk.gray(`  System call: ${error.syscall}`));
+      if (error.path) console.log(chalk.gray(`  Path: ${error.path}`));
     }
 
     const logicErrorCode = mapNodeErrorToLogicError(error);
@@ -131,7 +131,7 @@ export class CLIErrorHandler {
   }
 
   /**
-   * 일반 Error 처리
+   * Generic Error handling
    */
   private static handleGenericError(
     error: Error,
@@ -142,16 +142,16 @@ export class CLIErrorHandler {
   }
 
   /**
-   * 알 수 없는 에러 처리
+   * Unknown error handling
    */
   private static handleUnknownError(
     error: unknown,
     options: { verbose: boolean },
   ): ExitCodes {
-    console.error(`${chalk.red("✗")} 예상치 못한 오류가 발생했습니다`);
+    console.error(`${chalk.red("✗")} An unexpected error occurred`);
 
     if (options.verbose) {
-      console.log(chalk.gray("\n에러 정보:"));
+      console.log(chalk.gray("\nError info:"));
       console.log(chalk.gray(String(error)));
     }
 
@@ -159,29 +159,29 @@ export class CLIErrorHandler {
   }
 
   /**
-   * Node 에러를 사용자 친화적 메시지로 변환
+   * Convert Node errors to user-friendly messages
    */
   private static getNodeErrorMessage(error: NodeError): string {
     const messages: Record<string, string> = {
-      ENOENT: "파일 또는 디렉토리를 찾을 수 없습니다",
-      EACCES: "파일 접근 권한이 없습니다",
-      EPERM: "작업이 허용되지 않습니다",
-      EEXIST: "파일이 이미 존재합니다",
-      EISDIR: "디렉토리에 대한 작업은 허용되지 않습니다",
-      ENOTDIR: "디렉토리가 아닙니다",
-      ENOSPC: "디스크 공간이 부족합니다",
-      ECONNREFUSED: "연결이 거부되었습니다",
-      ECONNRESET: "연결이 재설정되었습니다",
-      ETIMEDOUT: "연결 시간이 초과되었습니다",
-      ENETUNREACH: "네트워크에 연결할 수 없습니다",
-      ENOTFOUND: "도메인을 찾을 수 없습니다",
+      ENOENT: "File or directory not found",
+      EACCES: "File access permission denied",
+      EPERM: "Operation not permitted",
+      EEXIST: "File already exists",
+      EISDIR: "Operation on directory not allowed",
+      ENOTDIR: "Not a directory",
+      ENOSPC: "Insufficient disk space",
+      ECONNREFUSED: "Connection refused",
+      ECONNRESET: "Connection reset",
+      ETIMEDOUT: "Connection timed out",
+      ENETUNREACH: "Network unreachable",
+      ENOTFOUND: "Domain not found",
     };
 
     return messages[error.code || ""] || error.message;
   }
 
   /**
-   * 여러 에러를 한 번에 처리
+   * Handle multiple errors at once
    */
   static handleMultiple(
     errors: BaseError[],
@@ -206,26 +206,26 @@ export class CLIErrorHandler {
   }
 
   /**
-   * 프로세스 종료 시 정리 작업
+   * Cleanup tasks when process exits
    */
   static setupExitHandlers(): void {
     process.on("SIGINT", () => {
-      console.log(chalk.yellow("\n\n작업이 사용자에 의해 중단되었습니다"));
+      console.log(chalk.yellow("\n\nOperation cancelled by user"));
       process.exit(ExitCodes.USER_CANCELLED);
     });
 
     process.on("SIGTERM", () => {
-      console.log(chalk.yellow("\n\n프로세스가 종료되었습니다"));
+      console.log(chalk.yellow("\n\nProcess terminated"));
       process.exit(ExitCodes.PROCESS_ERROR);
     });
 
     process.on("unhandledRejection", (error) => {
-      console.error(chalk.red("\n처리되지 않은 Promise 에러:"));
+      console.error(chalk.red("\nUnhandled Promise rejection:"));
       this.handle(error, { verbose: true });
     });
 
     process.on("uncaughtException", (error) => {
-      console.error(chalk.red("\n처리되지 않은 예외:"));
+      console.error(chalk.red("\nUncaught exception:"));
       this.handle(error, { verbose: true });
     });
   }

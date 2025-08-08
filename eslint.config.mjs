@@ -5,6 +5,14 @@ import tsParser from "@typescript-eslint/parser";
 
 export default defineConfig([
   {
+    "ignores": [
+      "dist/**",
+      "coverage/**",
+      "node_modules/**",
+      "build/**"
+    ]
+  },
+  {
     "files": [
       "**/*.{js,jsx,ts,tsx}"
     ],

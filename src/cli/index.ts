@@ -51,7 +51,7 @@ ${chalk.bold("Examples:")}
     "devboot init -y",
   )}                 ${chalk.gray("# Use defaults")}
   ${chalk.gray("$")} ${chalk.cyan(
-    "devboot add eslint-prettier",
+    "devboot add eslint prettier",
   )}     ${chalk.gray("# Add specific module")}
   ${chalk.gray("$")} ${chalk.cyan(
     "devboot list",

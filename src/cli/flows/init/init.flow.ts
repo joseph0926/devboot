@@ -152,8 +152,8 @@ export class InitFlow {
 
   private getConfigDisplay(config: string): string {
     const displays: Record<string, string> = {
-      "eslint-prettier": "ESLint + Prettier",
-      "git-hooks": "Git Hooks (Husky)",
+      "eslint": "ESLint",
+      "prettier": "Prettier",
       typescript: "TypeScript Config",
       editorconfig: "EditorConfig",
     };
@@ -161,7 +161,7 @@ export class InitFlow {
   }
 
   private isFullyConfigured(existingConfigs: string[]): boolean {
-    const essentialModules = ["eslint-prettier", "git-hooks"];
+    const essentialModules = ["eslint", "prettier", "editorconfig"];
     return essentialModules.every((module) => existingConfigs.includes(module));
   }
 
@@ -198,11 +198,11 @@ export class InitFlow {
   ): string[] {
     const modules = [];
 
-    if (!existingConfigs.includes("eslint-prettier")) {
-      modules.push("eslint-prettier");
+    if (!existingConfigs.includes("eslint")) {
+      modules.push("eslint");
     }
-    if (!existingConfigs.includes("git-hooks")) {
-      modules.push("git-hooks");
+    if (!existingConfigs.includes("prettier")) {
+      modules.push("prettier");
     }
     if (!existingConfigs.includes("editorconfig")) {
       modules.push("editorconfig");
@@ -318,15 +318,14 @@ export class InitFlow {
     console.log("\n" + chalk.bold("🎯 Next steps:"));
 
     const nextSteps: Record<string, string[]> = {
-      "eslint-prettier": [
+      "eslint": [
         `Run ${chalk.cyan("npm run lint")} to check your code`,
+      ],
+      "prettier": [
         `Run ${chalk.cyan("npm run format")} to format your code`,
       ],
-      "git-hooks": [
-        `Stage your changes with ${chalk.cyan("git add .")}`,
-        `Commit with ${chalk.cyan(
-          "git commit -m 'Add dev tools'",
-        )} - hooks will run automatically`,
+      "editorconfig": [
+        `Your editor will now respect .editorconfig settings`,
       ],
       typescript: [
         `TypeScript is now optimized for your ${this.getFrameworkDisplay(

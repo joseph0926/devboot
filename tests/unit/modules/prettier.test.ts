@@ -38,9 +38,9 @@ vi.mock('../../../src/utils/logger', () => ({
 
 describe('PrettierModule', () => {
   let module: PrettierModule;
-  let fileExistsMock: any;
-  let readFileMock: any;
-  let unlinkMock: any;
+  let fileExistsMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').fileExists>>;
+  let readFileMock: ReturnType<typeof vi.mocked<typeof import('fs/promises').readFile>>;
+  let unlinkMock: ReturnType<typeof vi.mocked<typeof import('fs/promises').unlink>>;
 
   beforeEach(async () => {
     module = new PrettierModule();
@@ -251,7 +251,7 @@ describe('PrettierModule', () => {
         return path.endsWith('.prettierrc.json');
       });
       const error = new Error('Permission denied');
-      (error as any).code = 'EACCES';
+      (error as NodeJS.ErrnoException).code = 'EACCES';
       unlinkMock.mockRejectedValue(error);
 
       const result = await module.uninstall(defaultOptions);

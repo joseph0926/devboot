@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readPackageJson, writePackageJson, fileExists, readFile, writeFile } from '../../../src/utils/file';
 import { SimpleLogicError } from '../../../src/errors/logic.error';
 import { ProjectNotFoundError, ProjectInvalidError } from '../../../src/errors/logic/project.error';
-import { LogicErrorCodes } from '../../../src/types/error.type';
 
 vi.mock('fs-extra', () => ({
   default: {
@@ -15,7 +14,7 @@ vi.mock('fs-extra', () => ({
 }));
 
 describe('file utils', () => {
-  let fsExtraMock: any;
+  let fsExtraMock: typeof import('fs-extra').default;
 
   beforeEach(async () => {
     const fsExtra = await import('fs-extra');
@@ -63,7 +62,7 @@ describe('file utils', () => {
     it('should throw SimpleLogicError for file read errors', async () => {
       fsExtraMock.pathExists.mockResolvedValue(true);
       const error = new Error('EACCES: permission denied');
-      (error as any).code = 'EACCES';
+      (error as NodeJS.ErrnoException).code = 'EACCES';
       fsExtraMock.readFile.mockRejectedValue(error);
 
       await expect(readPackageJson('/test/project')).rejects.toThrow(SimpleLogicError);
@@ -93,7 +92,7 @@ describe('file utils', () => {
 
     it('should throw permission error', async () => {
       const error = new Error('Permission denied');
-      (error as any).code = 'EACCES';
+      (error as NodeJS.ErrnoException).code = 'EACCES';
       fsExtraMock.writeJson.mockRejectedValue(error);
 
       await expect(writePackageJson('/test/project', {})).rejects.toThrow(SimpleLogicError);
@@ -102,7 +101,7 @@ describe('file utils', () => {
 
     it('should throw disk full error', async () => {
       const error = new Error('No space');
-      (error as any).code = 'ENOSPC';
+      (error as NodeJS.ErrnoException).code = 'ENOSPC';
       fsExtraMock.writeJson.mockRejectedValue(error);
 
       await expect(writePackageJson('/test/project', {})).rejects.toThrow(SimpleLogicError);
@@ -156,7 +155,7 @@ describe('file utils', () => {
 
     it('should throw FILE_NOT_FOUND error', async () => {
       const error = new Error('File not found');
-      (error as any).code = 'ENOENT';
+      (error as NodeJS.ErrnoException).code = 'ENOENT';
       fsExtraMock.readFile.mockRejectedValue(error);
 
       await expect(readFile('/test/file.txt')).rejects.toThrow(SimpleLogicError);
@@ -165,7 +164,7 @@ describe('file utils', () => {
 
     it('should throw permission error', async () => {
       const error = new Error('Permission denied');
-      (error as any).code = 'EACCES';
+      (error as NodeJS.ErrnoException).code = 'EACCES';
       fsExtraMock.readFile.mockRejectedValue(error);
 
       await expect(readFile('/test/file.txt')).rejects.toThrow(SimpleLogicError);
@@ -192,7 +191,7 @@ describe('file utils', () => {
 
     it('should throw permission error', async () => {
       const error = new Error('Permission denied');
-      (error as any).code = 'EPERM';
+      (error as NodeJS.ErrnoException).code = 'EPERM';
       fsExtraMock.ensureFile.mockRejectedValue(error);
 
       await expect(writeFile('/test/file.txt', 'content')).rejects.toThrow(SimpleLogicError);
@@ -201,7 +200,7 @@ describe('file utils', () => {
 
     it('should throw disk full error', async () => {
       const error = new Error('No space');
-      (error as any).code = 'ENOSPC';
+      (error as NodeJS.ErrnoException).code = 'ENOSPC';
       fsExtraMock.ensureFile.mockResolvedValue(undefined);
       fsExtraMock.writeFile.mockRejectedValue(error);
 

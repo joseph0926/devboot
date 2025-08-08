@@ -20,7 +20,16 @@ Setting up a modern development environment is repetitive and time-consuming. Ev
 
 DevBoot automates all of this with **intelligent environment detection** and **flexible configuration formats**. Run one command, and get a perfectly configured project that adapts to your setup.
 
-## 🎯 What's New in v0.2.1
+## 🎯 What's New in v0.2.2
+
+- **🔧 Module Loading Fixed** - Resolved dynamic import issues that prevented module installation
+- **🎯 Corrected Module Names** - Fixed references to non-existent modules (`eslint-prettier`, `git-hooks`)  
+- **✅ Improved Reliability** - All core modules now load and install properly
+- **🌍 Full Internationalization** - Complete English language support with user-friendly error messages
+- **💪 Enhanced Type Safety** - Replaced `any` types with proper TypeScript types throughout codebase
+- **🧪 Better Testing** - Fixed failing tests and improved test coverage
+
+### Previous Updates (v0.2.1)
 
 - **✨ Enhanced User Experience** - Beautiful emojis and improved progress indicators for package installation
 - **📦 Smart Package Display** - Clear categorization of dependencies vs dev dependencies with version info
@@ -44,7 +53,7 @@ npx devboot init
 
 # Add specific modules
 npx devboot add eslint prettier
-npx devboot add typescript
+npx devboot add typescript editorconfig
 
 # See available modules
 npx devboot list
@@ -99,12 +108,12 @@ npx devboot init
 
 ### Core Development Tools
 
-| Module | Description | Config Formats | Features |
-|--------|-------------|----------------|----------|
-| **eslint** | JavaScript/TypeScript linter | `.eslintrc.json`, `.eslintrc.js`, `eslint.config.ts`, `eslint.config.mjs` | ESLint v8/v9, Flat config, Framework presets |
-| **prettier** | Code formatter | `.prettierrc.json`, `prettier.config.js`, `.prettierrc.mjs` | Smart defaults, Framework integration |
-| **typescript** | TypeScript configuration | `tsconfig.json` | Framework-specific presets, Path mapping |
-| **editorconfig** | Consistent coding styles | `.editorconfig` | Cross-editor compatibility |
+| Module | Description | Config Formats | Status | Features |
+|--------|-------------|----------------|--------|----------|
+| **eslint** | JavaScript/TypeScript linter | `eslint.config.js`, `eslint.config.ts` | ✅ **Fully Working** | ESLint v9 flat config, Framework presets, Auto dependency installation |
+| **prettier** | Code formatter | `.prettierrc.json`, `.prettierignore` | ✅ **Fully Working** | Smart defaults, Framework integration, Auto script setup |
+| **typescript** | TypeScript configuration | `tsconfig.json` | ⚠️ **Partial** | Framework-specific presets, Path mapping (Interactive setup pending) |
+| **editorconfig** | Consistent coding styles | `.editorconfig` | ⚠️ **Partial** | Cross-editor compatibility (Interactive setup pending) |
 
 ### 🎛️ Configuration Format Examples
 
@@ -152,6 +161,7 @@ Add specific modules to your project.
 devboot add eslint          # Add ESLint with smart config detection
 devboot add prettier        # Add Prettier with format selection
 devboot add typescript      # Add TypeScript configuration
+devboot add editorconfig    # Add EditorConfig for consistent coding styles
 devboot add eslint prettier # Add multiple modules at once
 
 # Options
@@ -287,7 +297,7 @@ devboot init
 
 # Individual packages  
 cd packages/web && devboot add eslint prettier
-cd packages/api && devboot add eslint typescript
+cd packages/api && devboot add eslint typescript editorconfig
 ```
 
 ## 🛠️ Requirements
@@ -330,7 +340,16 @@ src/
 
 ## 📝 Changelog
 
-### v0.2.1 (Latest)
+### v0.2.2 (Latest)
+- 🔧 **Module Loading Fixed** - Resolved dynamic import issues preventing module installation
+- 🎯 **Corrected Module References** - Fixed non-existent module names (`eslint-prettier` → `eslint`, `prettier`)
+- ✅ **Improved Reliability** - All core modules (eslint, prettier, typescript, editorconfig) now work properly
+- 🌍 **Full English Support** - Complete internationalization with user-friendly error messages
+- 💪 **Enhanced Type Safety** - Replaced `any` types with proper TypeScript types throughout codebase
+- 🧪 **Better Testing** - Fixed failing tests and improved overall code quality
+- 🚀 **Production Ready** - CLI now fully functional for end-to-end module installation
+
+### v0.2.1
 - ✨ Enhanced user experience with beautiful emojis and progress indicators
 - 📦 Smart package display with clear dependency categorization
 - 🎨 User-friendly error messages with actionable suggestions
@@ -345,6 +364,16 @@ src/
 - 📁 Support for .js, .mjs, .cjs, .ts, .yml formats
 - ⚡ Performance improvements
 - 🐛 Bug fixes and stability improvements
+
+## 🚨 Breaking Changes in v0.2.2
+
+If you were using DevBoot v0.2.1 or earlier, please note:
+
+- **Module Names Changed**: Use individual module names instead of combined ones
+  - ❌ `devboot add eslint-prettier` → ✅ `devboot add eslint prettier`
+  - ❌ `devboot add git-hooks` → ✅ `devboot add editorconfig` (or your preferred git hooks setup)
+
+- **Improved Reliability**: Modules now install correctly without dynamic import errors
 
 ## 🙏 Acknowledgments
 

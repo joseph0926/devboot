@@ -110,7 +110,7 @@ export class AddFlow {
 
     log.message("");
     log.message(chalk.gray("Example:"));
-    log.message(chalk.cyan("  devboot add eslint-prettier typescript"));
+    log.message(chalk.cyan("  devboot add eslint prettier typescript"));
   }
 
   private showStartMessage(modules: string[], options: AddFlowOptions): void {
@@ -133,7 +133,11 @@ export class AddFlow {
       log.message(chalk.bold(`\n📦 ${module.displayName}`));
       log.message(chalk.gray(`   ${module.description}`));
 
-      const moduleInstance = await import(`../../../modules/${moduleName}`);
+      const moduleClass = ModuleRegistry.get(moduleName);
+      if (!moduleClass) {
+        throw new Error(`Module '${moduleName}' not found in registry`);
+      }
+      const moduleInstance = { default: moduleClass };
       if (moduleInstance.default?.files) {
         log.message(chalk.gray("\n   Files that would be created:"));
         moduleInstance.default.files.forEach((file: string) => {
@@ -313,17 +317,16 @@ export class AddFlow {
   private showNextSteps(installedModules: string[]): void {
     const steps: string[] = [];
 
-    if (installedModules.includes("git-hooks")) {
-      steps.push(
-        `${chalk.cyan(
-          "git add -A && git commit -m 'Add dev tools'",
-        )} - Test your new git hooks`,
-      );
+    if (installedModules.includes("eslint")) {
+      steps.push(`${chalk.cyan("npm run lint")} - Check your code`);
     }
 
-    if (installedModules.includes("eslint-prettier")) {
-      steps.push(`${chalk.cyan("npm run lint")} - Check your code`);
+    if (installedModules.includes("prettier")) {
       steps.push(`${chalk.cyan("npm run format")} - Format your code`);
+    }
+
+    if (installedModules.includes("editorconfig")) {
+      steps.push("Restart your editor to apply .editorconfig settings");
     }
 
     if (installedModules.includes("typescript")) {

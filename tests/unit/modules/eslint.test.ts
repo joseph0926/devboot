@@ -42,9 +42,9 @@ vi.mock("../../../src/utils/logger", () => ({
 describe("ESLintModule", () => {
   let module: ESLintModule;
   let testOptions: InstallOptions;
-  let fileExistsMock: any;
-  let unlinkMock: any;
-  let readFileMock: any;
+  let fileExistsMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').fileExists>>;
+  let unlinkMock: ReturnType<typeof vi.mocked<typeof import('fs/promises').unlink>>;
+  let readFileMock: ReturnType<typeof vi.mocked<typeof import('fs/promises').readFile>>;
 
   beforeEach(async () => {
     module = new ESLintModule();

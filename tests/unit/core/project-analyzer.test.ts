@@ -11,8 +11,8 @@ vi.mock('../../../src/utils/file', () => ({
 
 describe('ProjectAnalyzer', () => {
   let analyzer: ProjectAnalyzer;
-  let readPackageJsonMock: any;
-  let fileExistsMock: any;
+  let readPackageJsonMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').readPackageJson>>;
+  let fileExistsMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').fileExists>>;
 
   beforeEach(async () => {
     analyzer = new ProjectAnalyzer();

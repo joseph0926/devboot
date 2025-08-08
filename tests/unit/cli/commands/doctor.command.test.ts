@@ -228,7 +228,7 @@ describe("DoctorCommand", () => {
       await program.parseAsync(argv);
 
       expect(log.message).toHaveBeenCalledWith(
-        expect.stringContaining("uncommitted changes")
+        expect.stringContaining("Initialized (uncommitted changes)")
       );
     });
 

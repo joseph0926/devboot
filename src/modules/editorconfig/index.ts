@@ -199,7 +199,7 @@ export class EditorConfigModule extends BaseModule {
   }
 
   /**
-   * 비대화형 모드나 dry-run을 위한 기본 설정 생성
+   * Generate default configuration for non-interactive mode or dry-run
    */
   private generateDefaultConfig(options: InstallOptions): string {
     const lines: string[] = [

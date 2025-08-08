@@ -27,8 +27,8 @@ vi.mock('../../../src/utils/logger', () => ({
 
 describe('EditorConfigModule', () => {
   let module: EditorConfigModule;
-  let fileExistsMock: any;
-  let unlinkMock: any;
+  let fileExistsMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').fileExists>>;
+  let unlinkMock: ReturnType<typeof vi.mocked<typeof import('fs/promises').unlink>>;
 
   beforeEach(async () => {
     module = new EditorConfigModule();
@@ -224,7 +224,7 @@ describe('EditorConfigModule', () => {
     it('should handle permission errors', async () => {
       fileExistsMock.mockResolvedValue(true);
       const error = new Error('Permission denied');
-      (error as any).code = 'EACCES';
+      (error as NodeJS.ErrnoException).code = 'EACCES';
       unlinkMock.mockRejectedValue(error);
 
       const result = await module.uninstall(defaultOptions);

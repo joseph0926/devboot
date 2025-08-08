@@ -7,7 +7,7 @@ vi.mock('../../../src/utils/file', () => ({
 
 describe('TSConfigAnalyzer', () => {
   let analyzer: TSConfigAnalyzer;
-  let readFileMock: any;
+  let readFileMock: ReturnType<typeof vi.mocked<typeof import('../../../src/utils/file').readFile>>;
 
   beforeEach(async () => {
     analyzer = new TSConfigAnalyzer();
