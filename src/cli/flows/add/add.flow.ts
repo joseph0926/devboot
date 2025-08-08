@@ -126,6 +126,8 @@ export class AddFlow {
     log.info(chalk.blue("🔍 Dry run mode - no changes will be made"));
     log.message("");
 
+    const context = await this.moduleInstaller.prepareContext(process.cwd());
+
     for (const moduleName of modules) {
       const module = ModuleRegistry.get(moduleName);
       if (!module) continue;
@@ -138,17 +140,22 @@ export class AddFlow {
         throw new Error(`Module '${moduleName}' not found in registry`);
       }
       const moduleInstance = { default: moduleClass };
-      if (moduleInstance.default?.files) {
+      const filesToCreate = await moduleInstance.default.getFilesToCreate(context);
+      if (filesToCreate.size > 0) {
         log.message(chalk.gray("\n   Files that would be created:"));
-        moduleInstance.default.files.forEach((file: string) => {
+        for (const [file] of filesToCreate) {
           log.message(chalk.gray(`   • ${file}`));
-        });
+        }
       }
 
-      if (moduleInstance.default?.dependencies) {
+      const dependencies = await moduleInstance.default.getDependencies(context);
+      if (dependencies.dependencies || dependencies.devDependencies) {
         log.message(chalk.gray("\n   Packages that would be installed:"));
-        moduleInstance.default.dependencies.forEach((dep: string) => {
+        Object.keys(dependencies.dependencies || {}).forEach((dep: string) => {
           log.message(chalk.gray(`   • ${dep}`));
+        });
+        Object.keys(dependencies.devDependencies || {}).forEach((dep: string) => {
+          log.message(chalk.gray(`   • ${dep} (dev)`));
         });
       }
     }

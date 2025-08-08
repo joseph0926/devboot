@@ -332,9 +332,6 @@ export class InitFlow {
           "react",
         )} project`,
       ],
-      editorconfig: [
-        `Your editor will now respect ${chalk.cyan(".editorconfig")} settings`,
-      ],
     };
 
     installedModules.forEach((module) => {
