@@ -20,7 +20,7 @@ Setting up a modern development environment is repetitive and time-consuming. Ev
 
 DevBoot automates all of this with **intelligent environment detection** and **flexible configuration formats**. Run one command, and get a perfectly configured project that adapts to your setup.
 
-## 🎯 What's New in v0.2.2
+## 🎯 What's New in v0.2.3
 
 - **🔧 Module Loading Fixed** - Resolved dynamic import issues that prevented module installation
 - **🎯 Corrected Module Names** - Fixed references to non-existent modules (`eslint-prettier`, `git-hooks`)  
@@ -340,7 +340,7 @@ src/
 
 ## 📝 Changelog
 
-### v0.2.2 (Latest)
+### v0.2.3 (Latest)
 - 🔧 **Module Loading Fixed** - Resolved dynamic import issues preventing module installation
 - 🎯 **Corrected Module References** - Fixed non-existent module names (`eslint-prettier` → `eslint`, `prettier`)
 - ✅ **Improved Reliability** - All core modules (eslint, prettier, typescript, editorconfig) now work properly
@@ -365,7 +365,7 @@ src/
 - ⚡ Performance improvements
 - 🐛 Bug fixes and stability improvements
 
-## 🚨 Breaking Changes in v0.2.2
+## 🚨 Breaking Changes in v0.2.3
 
 If you were using DevBoot v0.2.1 or earlier, please note:
 

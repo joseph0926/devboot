@@ -1,6 +1,6 @@
 {
   "name": "devboot",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Zero-config dev environment setup for modern web projects",
   "keywords": [
     "cli",
